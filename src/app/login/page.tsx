@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,10 +17,33 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Icons } from "@/components/icons";
+import { toast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
   const router = useRouter();
   const bgImage = PlaceHolderImages.find((img) => img.id === "login-background");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleSignIn = () => {
+    if (email === "admin@neu.edu.ph" && password === "Adminsir") {
+      toast({
+        title: "Admin Login Successful",
+        description: "Redirecting to admin dashboard...",
+      });
+      router.push("/admin/dashboard");
+    } else if (email && password) {
+      // For now, any other valid-looking email/password will go to the user flow.
+      // In a real app, this would involve actual authentication.
+      router.push("/purpose");
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: "Please enter both email and password.",
+      });
+    }
+  };
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center">
@@ -49,13 +73,24 @@ export default function LoginPage() {
         <CardContent className="grid gap-4">
             <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="name@example.com" />
+                <Input 
+                    id="email" 
+                    type="email" 
+                    placeholder="name@example.com" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                />
             </div>
             <div className="grid gap-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" />
+                <Input 
+                    id="password" 
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                />
             </div>
-            <Button onClick={() => router.push('/purpose')} className="w-full">
+            <Button onClick={handleSignIn} className="w-full">
                 Sign In
             </Button>
             <div className="relative">
