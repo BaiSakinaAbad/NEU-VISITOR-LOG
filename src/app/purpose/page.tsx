@@ -4,6 +4,10 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { useEffect } from "react";
+import { collection, doc, getDoc, setDoc } from "firebase/firestore";
+import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase, setDocumentNonBlocking } from "@/firebase";
+import { generatePersonalizedWelcomeMessage } from "@/ai/flows/generate-personalized-welcome-message";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -22,9 +26,9 @@ import {
   FormItem,
   FormLabel,
 } from "@/components/ui/form";
-import { visitPurposes } from "@/lib/data";
 import { Icons } from "@/components/icons";
 import { toast } from "@/hooks/use-toast";
+import { UserProfile, VisitPurpose } from "@/lib/schema";
 
 const FormSchema = z.object({
   purposes: z.array(z.string()).refine((value) => value.some((item) => item), {
@@ -34,6 +38,20 @@ const FormSchema = z.object({
 
 export default function PurposePage() {
   const router = useRouter();
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'user_profiles', user.uid) : null, [firestore, user]);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
+  const purposesRef = useMemoFirebase(() => firestore ? collection(firestore, 'visit_purposes') : null, [firestore]);
+  const { data: visitPurposes, isLoading: arePurposesLoading } = useCollection<VisitPurpose>(purposesRef);
+
+  useEffect(() => {
+    if (!isProfileLoading && userProfile && userProfile.affiliation === 'Unknown') {
+      router.push('/onboarding');
+    }
+  }, [userProfile, isProfileLoading, router]);
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -42,14 +60,49 @@ export default function PurposePage() {
     },
   });
 
-  function onSubmit(data: z.infer<typeof FormSchema>) {
-    const params = new URLSearchParams();
-    data.purposes.forEach(p => params.append("purposes", p));
+  async function onSubmit(data: z.infer<typeof FormSchema>) {
+    if (!user || !firestore || !userProfile) {
+        toast({ variant: 'destructive', title: 'Error', description: 'User not found.' });
+        return;
+    }
+
+    let welcomeMessage = `Welcome to NEU Library, ${userProfile.displayName}! We're glad to have you.`;
+    try {
+        const result = await generatePersonalizedWelcomeMessage({
+            username: userProfile.displayName,
+            affiliation: userProfile.affiliation,
+            visitPurpose: data.purposes,
+        });
+        welcomeMessage = result.welcomeMessage;
+    } catch (error) {
+        console.error("Failed to generate welcome message, using default.", error);
+    }
+    
+    const newVisitRef = doc(collection(firestore, 'user_profiles', user.uid, 'visits'));
+    const newVisit = {
+      id: newVisitRef.id,
+      userId: user.uid,
+      visitDateTime: new Date().toISOString(),
+      purposeIds: data.purposes,
+      welcomeMessage: welcomeMessage,
+    };
+    
+    setDocumentNonBlocking(newVisitRef, newVisit, { merge: false });
+
     toast({
       title: "Visit Logged",
       description: "Your visit purposes have been recorded.",
     });
-    router.push(`/welcome?${params.toString()}`);
+
+    router.push(`/welcome?visitId=${newVisit.id}`);
+  }
+
+  if (isProfileLoading || arePurposesLoading) {
+    return (
+        <div className="flex min-h-screen items-center justify-center">
+            <Icons.logo className="h-8 w-8 animate-spin text-primary" />
+        </div>
+    )
   }
 
   return (
@@ -73,36 +126,36 @@ export default function PurposePage() {
                 render={() => (
                   <FormItem>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      {visitPurposes.map((purpose) => (
+                      {visitPurposes?.map((purpose) => (
                         <FormField
-                          key={purpose}
+                          key={purpose.id}
                           control={form.control}
                           name="purposes"
                           render={({ field }) => {
                             return (
                               <FormItem
-                                key={purpose}
+                                key={purpose.id}
                                 className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 hover:bg-accent/50"
                               >
                                 <FormControl>
                                   <Checkbox
-                                    checked={field.value?.includes(purpose)}
+                                    checked={field.value?.includes(purpose.name)}
                                     onCheckedChange={(checked) => {
                                       return checked
                                         ? field.onChange([
                                             ...field.value,
-                                            purpose,
+                                            purpose.name,
                                           ])
                                         : field.onChange(
                                             field.value?.filter(
-                                              (value) => value !== purpose
+                                              (value) => value !== purpose.name
                                             )
                                           );
                                     }}
                                   />
                                 </FormControl>
                                 <FormLabel className="font-normal">
-                                  {purpose}
+                                  {purpose.name}
                                 </FormLabel>
                               </FormItem>
                             );
@@ -116,7 +169,9 @@ export default function PurposePage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" size="lg">Log Visit</Button>
+              <Button type="submit" className="w-full" size="lg" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? "Logging..." : "Log Visit"}
+                </Button>
             </form>
           </Form>
         </CardContent>

@@ -9,25 +9,47 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Users, LogIn, LineChart, Building, BookOpen } from "lucide-react";
-import { mockDailyStats, mockUsers, mockVisits } from "@/lib/data";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { useMemo } from "react";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, collectionGroup, query, where } from "firebase/firestore";
+import { UserProfile } from "@/lib/schema";
+import { Visit } from "@/lib/schema";
+import { format, isToday } from "date-fns";
 
 export default function AdminDashboardPage() {
+  const firestore = useFirestore();
+
+  const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'user_profiles')) : null, [firestore]);
+  const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
+
+  const visitsQuery = useMemoFirebase(() => firestore ? query(collectionGroup(firestore, 'visits')) : null, [firestore]);
+  const { data: visits, isLoading: visitsLoading } = useCollection<Visit>(visitsQuery);
+
+  const todaysVisitors = useMemo(() => {
+    if (!visits) return 0;
+    return visits.filter(v => isToday(new Date(v.visitDateTime))).length;
+  }, [visits]);
 
   const collegeVisitCounts = useMemo(() => {
-    const counts = mockUsers.reduce((acc, user) => {
-        acc[user.affiliation] = (acc[user.affiliation] || 0) + 1;
+    if (!users || !visits) return [];
+    const userAffiliationMap = new Map(users.map(u => [u.id, u.affiliation]));
+    const counts = visits.reduce((acc, visit) => {
+        const affiliation = userAffiliationMap.get(visit.userId);
+        if (affiliation && affiliation !== 'Unknown') {
+            acc[affiliation] = (acc[affiliation] || 0) + 1;
+        }
         return acc;
     }, {} as Record<string, number>);
     
     return Object.entries(counts)
         .map(([affiliation, count]) => ({ affiliation, count }))
         .sort((a, b) => b.count - a.count);
-  }, []);
+  }, [users, visits]);
 
   const visitPurposeCounts = useMemo(() => {
-    const counts = mockVisits.flatMap(visit => visit.purposes).reduce((acc, purpose) => {
+    if (!visits) return [];
+    const counts = visits.flatMap(visit => visit.purposeIds).reduce((acc, purpose) => {
         acc[purpose] = (acc[purpose] || 0) + 1;
         return acc;
     }, {} as Record<string, number>);
@@ -35,8 +57,18 @@ export default function AdminDashboardPage() {
     return Object.entries(counts)
         .map(([purpose, count]) => ({ purpose, count }))
         .sort((a, b) => b.count - a.count);
-  }, []);
+  }, [visits]);
 
+  const dailyStats = useMemo(() => {
+    if (!visits) return [];
+    const stats = visits.reduce((acc, visit) => {
+      const date = format(new Date(visit.visitDateTime), 'MMM d');
+      acc[date] = (acc[date] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(stats).map(([date, visitors]) => ({ date, visitors })).slice(-30);
+  }, [visits]);
 
   return (
     <>
@@ -52,8 +84,8 @@ export default function AdminDashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">78</div>
-            <p className="text-xs text-muted-foreground">+5 from yesterday</p>
+            <div className="text-2xl font-bold">{visitsLoading ? '...' : todaysVisitors}</div>
+            <p className="text-xs text-muted-foreground">Logged visits today</p>
           </CardContent>
         </Card>
         <Card>
@@ -62,7 +94,7 @@ export default function AdminDashboardPage() {
             <LogIn className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockUsers.length}</div>
+            <div className="text-2xl font-bold">{usersLoading ? '...' : (users?.length ?? 0)}</div>
             <p className="text-xs text-muted-foreground">Registered in the system</p>
           </CardContent>
         </Card>
@@ -89,7 +121,7 @@ export default function AdminDashboardPage() {
                 visitors: { label: "Visitors", color: "hsl(var(--primary))" },
             }} className="h-[250px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={mockDailyStats} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <BarChart data={dailyStats} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                     <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} fontSize={12} />
                     <YAxis tickLine={false} axisLine={false} tickMargin={8} fontSize={12} />
                     <Tooltip cursor={false} content={<ChartTooltipContent />} />

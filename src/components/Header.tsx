@@ -14,20 +14,39 @@ import {
 import { Button } from "@/components/ui/button";
 import { LogOut, User } from "lucide-react";
 import { Icons } from "./icons";
+import { useUser, useDoc, useFirestore, useMemoFirebase, useAuth } from "@/firebase";
+import { signOut } from "firebase/auth";
+import { doc } from "firebase/firestore";
+import type { UserProfile } from "@/lib/schema";
 
 export function Header() {
   const router = useRouter();
   const pathname = usePathname();
-  const isAdmin = pathname.startsWith("/admin");
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const auth = useAuth();
 
-  const userName = isAdmin ? "Jeremias C. Esperanza" : "Alex Johnson";
-  const userEmail = isAdmin ? "admin@neu.edu.ph" : "alex.j@neu.edu";
-  const userAvatar = isAdmin ? "https://i.pravatar.cc/150?u=jeremias" : "https://i.pravatar.cc/150?u=a042581f4e29026024d";
-  const userFallback = isAdmin ? "JE" : "AJ";
+  const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'user_profiles', user.uid) : null, [firestore, user]);
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+
+  const adminRoleRef = useMemoFirebase(() => user ? doc(firestore, 'roles_admin', user.uid) : null, [firestore, user]);
+  const { data: adminRole } = useDoc(adminRoleRef);
+  
+  const isAdmin = adminRole !== null;
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/login');
+  }
+  
+  const userName = isAdmin ? "Jeremias C. Esperanza" : userProfile?.displayName ?? "";
+  const userEmail = isAdmin ? "admin@neu.edu.ph" : userProfile?.email ?? "";
+  const userAvatar = user?.photoURL;
+  const userFallback = (isAdmin ? "JE" : userProfile?.displayName.split(' ').map(n => n[0]).join('')) ?? "U";
   const profileLink = isAdmin ? '/admin/dashboard' : '/dashboard';
 
-  const title = isAdmin ? "NEU Admin" : "NEU Library";
-  const titleLink = isAdmin ? "/admin/dashboard" : "/dashboard";
+  const title = pathname.startsWith('/admin') ? "NEU Admin" : "NEU Library";
+  const titleLink = pathname.startsWith('/admin') ? "/admin/dashboard" : "/dashboard";
 
   const UserMenu = (
     <DropdownMenu>
@@ -35,12 +54,12 @@ export function Header() {
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
             <Avatar className="h-9 w-9">
               {isAdmin ? (
-                <AvatarFallback>
-                  <User className="h-5 w-5" />
-                </AvatarFallback>
+                 <AvatarFallback>
+                   <User className="h-5 w-5" />
+                 </AvatarFallback>
               ) : (
                 <>
-                  <AvatarImage src={userAvatar} alt={userName} />
+                  {userAvatar && <AvatarImage src={userAvatar} alt={userName} />}
                   <AvatarFallback>{userFallback}</AvatarFallback>
                 </>
               )}
@@ -62,7 +81,7 @@ export function Header() {
             <span>Profile</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => router.push('/login')}>
+            <DropdownMenuItem onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
             <span>Log out</span>
             </DropdownMenuItem>
@@ -70,7 +89,7 @@ export function Header() {
     </DropdownMenu>
   );
 
-  if (isAdmin) {
+  if (pathname.startsWith('/admin')) {
       return UserMenu;
   }
   
@@ -86,7 +105,7 @@ export function Header() {
           </Link>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-4">
-          {UserMenu}
+          {user && UserMenu}
         </div>
       </div>
     </header>

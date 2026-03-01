@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Card,
   CardContent,
@@ -14,21 +16,37 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CalendarDays, Users, LogIn } from "lucide-react";
-import { mockVisits, mockUsers } from "@/lib/data";
-import { format } from 'date-fns';
+import { format, getMonth } from 'date-fns';
+import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
+import { doc, collection, query, orderBy, limit } from "firebase/firestore";
+import type { UserProfile, Visit } from "@/lib/schema";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
-  const currentUser = mockUsers[0];
-  const userVisits = mockVisits.filter(v => v.userId === currentUser.id);
+  const { user } = useUser();
+  const firestore = useFirestore();
 
-  const visitsThisMonth = userVisits.filter(v => new Date(v.date).getMonth() === new Date().getMonth()).length;
+  const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'user_profiles', user.uid) : null, [firestore, user]);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
+  const visitsRef = useMemoFirebase(() => user ? query(collection(firestore, 'user_profiles', user.uid, 'visits'), orderBy('visitDateTime', 'desc')) : null, [firestore, user]);
+  const { data: userVisits, isLoading: areVisitsLoading } = useCollection<Visit>(visitsRef);
+  
+  const allUsersRef = useMemoFirebase(() => firestore ? collection(firestore, 'user_profiles') : null, [firestore]);
+  const { data: allUsers, isLoading: areAllUsersLoading } = useCollection(allUsersRef);
+
+  const visitsThisMonth = userVisits?.filter(v => getMonth(new Date(v.visitDateTime)) === getMonth(new Date())).length ?? 0;
 
   return (
     <>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight font-headline">
-          Welcome back, {currentUser.name.split(' ')[0]}!
-        </h1>
+        {isProfileLoading ? (
+          <Skeleton className="h-9 w-1/2" />
+        ) : (
+          <h1 className="text-3xl font-bold tracking-tight font-headline">
+            Welcome back, {userProfile?.displayName.split(' ')[0]}!
+          </h1>
+        )}
         <p className="text-muted-foreground">Here's your library activity overview.</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
@@ -40,7 +58,7 @@ export default function DashboardPage() {
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{visitsThisMonth}</div>
+            <div className="text-2xl font-bold">{areVisitsLoading ? <Skeleton className="h-8 w-10"/> : visitsThisMonth}</div>
             <p className="text-xs text-muted-foreground">
               in {format(new Date(), 'MMMM yyyy')}
             </p>
@@ -54,7 +72,7 @@ export default function DashboardPage() {
             <LogIn className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{userVisits.length}</div>
+            <div className="text-2xl font-bold">{areVisitsLoading ? <Skeleton className="h-8 w-10"/> : userVisits?.length ?? 0}</div>
             <p className="text-xs text-muted-foreground">
               Since your first visit
             </p>
@@ -62,13 +80,13 @@ export default function DashboardPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Current Visitors</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Library Users</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">78</div>
+            <div className="text-2xl font-bold">{areAllUsersLoading ? <Skeleton className="h-8 w-10"/> : allUsers?.length ?? 0}</div>
             <p className="text-xs text-muted-foreground">
-              Logged in today
+              Registered in the system
             </p>
           </CardContent>
         </Card>
@@ -88,11 +106,12 @@ export default function DashboardPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {userVisits.slice(0, 5).map((visit) => (
+              {areVisitsLoading && <TableRow><TableCell colSpan={3} className="text-center">Loading visits...</TableCell></TableRow>}
+              {userVisits?.slice(0, 5).map((visit) => (
                 <TableRow key={visit.id}>
-                  <TableCell className="font-medium">{format(new Date(visit.date), 'MMMM d, yyyy')}</TableCell>
-                  <TableCell>{format(new Date(visit.date), 'p')}</TableCell>
-                  <TableCell>{visit.purposes.join(', ')}</TableCell>
+                  <TableCell className="font-medium">{format(new Date(visit.visitDateTime), 'MMMM d, yyyy')}</TableCell>
+                  <TableCell>{format(new Date(visit.visitDateTime), 'p')}</TableCell>
+                  <TableCell>{visit.purposeIds.join(', ')}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

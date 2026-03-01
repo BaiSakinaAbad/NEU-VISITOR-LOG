@@ -35,25 +35,30 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
   } from "@/components/ui/alert-dialog"
   
 import { MoreHorizontal, Search, UserX } from "lucide-react";
-import { mockUsers } from "@/lib/data";
-import type { User } from "@/lib/types";
+import type { UserProfile } from "@/lib/schema";
+import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
+import { collection, doc, query } from "firebase/firestore";
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>(mockUsers);
+  const firestore = useFirestore();
+  const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'user_profiles')) : null, [firestore]);
+  const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
+
   const [searchQuery, setSearchQuery] = useState("");
 
-  const handleBlockUser = (userId: string) => {
-    setUsers(users.map(u => u.id === userId ? { ...u, isBlocked: !u.isBlocked } : u));
+  const handleBlockUser = (userId: string, currentStatus: boolean) => {
+    if (!firestore) return;
+    const userRef = doc(firestore, 'user_profiles', userId);
+    updateDocumentNonBlocking(userRef, { isBlocked: !currentStatus });
   };
 
-  const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+  const filteredUsers = users?.filter(user => 
+    user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) || 
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ) ?? [];
 
   return (
     <Card>
@@ -84,16 +89,17 @@ export default function UsersPage() {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {filteredUsers.map((user) => (
+                {usersLoading && <TableRow><TableCell colSpan={3} className="text-center">Loading users...</TableCell></TableRow>}
+                {!usersLoading && filteredUsers.map((user) => (
                 <TableRow key={user.id}>
                     <TableCell>
                     <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9">
-                            <AvatarImage src={user.avatar} alt={user.name} />
-                            <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                            {/* <AvatarImage src={user.avatar} alt={user.name} /> */}
+                            <AvatarFallback>{user.displayName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                         </Avatar>
                         <div>
-                            <div className="font-medium">{user.name}</div>
+                            <div className="font-medium">{user.displayName}</div>
                             <div className="text-sm text-muted-foreground">{user.email}</div>
                         </div>
                     </div>
@@ -124,12 +130,12 @@ export default function UsersPage() {
                             <AlertDialogHeader>
                             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                This action will {user.isBlocked ? "unblock" : "block"} {user.name} and {user.isBlocked ? "allow" : "prevent"} them from accessing the library system.
+                                This action will {user.isBlocked ? "unblock" : "block"} {user.displayName} and {user.isBlocked ? "allow" : "prevent"} them from accessing the library system.
                             </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleBlockUser(user.id)} className={user.isBlocked ? "" : "bg-destructive text-destructive-foreground hover:bg-destructive/90"}>
+                            <AlertDialogAction onClick={() => handleBlockUser(user.id, user.isBlocked)} className={user.isBlocked ? "" : "bg-destructive text-destructive-foreground hover:bg-destructive/90"}>
                                 Confirm
                             </AlertDialogAction>
                             </AlertDialogFooter>

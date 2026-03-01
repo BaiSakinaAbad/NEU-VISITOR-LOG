@@ -2,8 +2,10 @@
 
 import { Suspense } from 'react';
 import { useRouter, useSearchParams } from "next/navigation";
-import { generatePersonalizedWelcomeMessage } from "@/ai/flows/generate-personalized-welcome-message";
 import { useEffect, useState } from "react";
+import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { Visit } from '@/lib/schema';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,30 +22,16 @@ import { Icons } from "@/components/icons";
 function WelcomeMessage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [welcomeMessage, setWelcomeMessage] = useState("");
-  const [loading, setLoading] = useState(true);
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const visitId = searchParams.get('visitId');
 
-  useEffect(() => {
-    const purposes = searchParams.getAll("purposes");
-    const fetchWelcomeMessage = async () => {
-      try {
-        setLoading(true);
-        const result = await generatePersonalizedWelcomeMessage({
-          username: "Alex Johnson",
-          affiliation: "College of Engineering",
-          visitPurpose: purposes.length > 0 ? purposes : ["general use"],
-        });
-        setWelcomeMessage(result.welcomeMessage);
-      } catch (error) {
-        console.error("Failed to generate welcome message:", error);
-        setWelcomeMessage("Welcome to NEU Library! We're glad to have you.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const visitRef = useMemoFirebase(() => {
+    if (!user || !firestore || !visitId) return null;
+    return doc(firestore, 'user_profiles', user.uid, 'visits', visitId);
+  }, [user, firestore, visitId]);
 
-    fetchWelcomeMessage();
-  }, [searchParams]);
+  const { data: visit, isLoading } = useDoc<Visit>(visitRef);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background/80 p-4">
@@ -56,18 +44,18 @@ function WelcomeMessage() {
           <CardDescription>Your visit has been successfully logged.</CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {isLoading ? (
             <div className="space-y-2">
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-4 w-3/4" />
             </div>
           ) : (
-            <p className="text-center text-lg">{welcomeMessage}</p>
+            <p className="text-center text-lg">{visit?.welcomeMessage || "We're glad to have you."}</p>
           )}
         </CardContent>
         <CardFooter>
-          <Button onClick={() => router.push("/dashboard")} className="w-full" size="lg" disabled={loading}>
+          <Button onClick={() => router.push("/dashboard")} className="w-full" size="lg" disabled={isLoading}>
             Go to Dashboard
           </Button>
         </CardFooter>
@@ -78,7 +66,11 @@ function WelcomeMessage() {
 
 export default function WelcomePage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={
+            <div className="flex min-h-screen items-center justify-center">
+                <Icons.logo className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        }>
             <WelcomeMessage />
         </Suspense>
     )
