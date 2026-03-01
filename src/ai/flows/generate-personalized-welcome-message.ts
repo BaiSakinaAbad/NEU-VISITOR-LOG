@@ -28,6 +28,7 @@ export async function generatePersonalizedWelcomeMessage(input: GeneratePersonal
 
 const prompt = ai.definePrompt({
   name: 'generatePersonalizedWelcomeMessagePrompt',
+  model: 'googleai/gemini-1.5-flash-latest',
   input: {schema: GeneratePersonalizedWelcomeMessageInputSchema},
   output: {schema: GeneratePersonalizedWelcomeMessageOutputSchema},
   prompt: `Generate a warm and personalized welcome message for a user checking into the NEU Library.
