@@ -34,32 +34,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <SidebarContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <Link href="/admin/dashboard" passHref>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={pathname === '/admin/dashboard'}
-                      tooltip="Dashboard"
-                    >
-                      <a>
-                        <Home />
-                        <span>Dashboard</span>
-                      </a>
-                    </SidebarMenuButton>
-                  </Link>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === '/admin/dashboard'}
+                    tooltip="Dashboard"
+                  >
+                    <Link href="/admin/dashboard">
+                      <Home />
+                      <span>Dashboard</span>
+                    </Link>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <Link href="/admin/dashboard" passHref>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={pathname.startsWith('/admin/users')}
-                      tooltip="User Management"
-                    >
-                      <a>
-                        <Users />
-                        <span>User Management</span>
-                      </a>
-                    </SidebarMenuButton>
-                  </Link>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname.startsWith('/admin/users')}
+                    tooltip="User Management"
+                  >
+                    <Link href="/admin/dashboard">
+                      <Users />
+                      <span>User Management</span>
+                    </Link>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
             </SidebarContent>
