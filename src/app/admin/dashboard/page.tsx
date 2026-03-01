@@ -63,7 +63,7 @@ export default function AdminDashboardPage() {
   return (
     <>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight font-headline">Admin Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight font-headline">Welcome, Jeremias!</h1>
         <p className="text-muted-foreground">Real-time library analytics and user management.</p>
       </div>
 
