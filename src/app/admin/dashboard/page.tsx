@@ -8,11 +8,36 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Users, LogIn, LineChart } from "lucide-react";
-import { mockDailyStats, mockUsers } from "@/lib/data";
+import { Users, LogIn, LineChart, Building, BookOpen } from "lucide-react";
+import { mockDailyStats, mockUsers, mockVisits } from "@/lib/data";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
+import { useMemo } from "react";
 
 export default function AdminDashboardPage() {
+
+  const collegeVisitCounts = useMemo(() => {
+    const counts = mockUsers.reduce((acc, user) => {
+        acc[user.affiliation] = (acc[user.affiliation] || 0) + 1;
+        return acc;
+    }, {} as Record<string, number>);
+    
+    return Object.entries(counts)
+        .map(([affiliation, count]) => ({ affiliation, count }))
+        .sort((a, b) => b.count - a.count);
+  }, []);
+
+  const visitPurposeCounts = useMemo(() => {
+    const counts = mockVisits.flatMap(visit => visit.purposes).reduce((acc, purpose) => {
+        acc[purpose] = (acc[purpose] || 0) + 1;
+        return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(counts)
+        .map(([purpose, count]) => ({ purpose, count }))
+        .sort((a, b) => b.count - a.count);
+  }, []);
+
+
   return (
     <>
       <div className="mb-6">
@@ -53,7 +78,7 @@ export default function AdminDashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-8">
+      <div className="grid gap-8 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Visitor Statistics</CardTitle>
@@ -74,6 +99,44 @@ export default function AdminDashboardPage() {
             </ChartContainer>
           </CardContent>
         </Card>
+
+        <div className="grid grid-rows-2 gap-8">
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <CardTitle>Visits by College</CardTitle>
+                        <Building className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <CardDescription>Distribution of visitors across different colleges.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    {collegeVisitCounts.map(({ affiliation, count }) => (
+                        <div key={affiliation} className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">{affiliation}</span>
+                            <span className="font-semibold">{count}</span>
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <CardTitle>Top Visit Purposes</CardTitle>
+                        <BookOpen className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <CardDescription>Most common reasons for visiting the library.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    {visitPurposeCounts.map(({ purpose, count }) => (
+                        <div key={purpose} className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">{purpose}</span>
+                            <span className="font-semibold">{count}</span>
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+        </div>
       </div>
     </>
   );
