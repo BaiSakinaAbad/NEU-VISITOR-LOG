@@ -1,0 +1,137 @@
+/**
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model combined with a role-based
+ * access control (RBAC) system for administrators. Regular users have full
+ * control over their own data (profile and visits), but are denied access to
+ * the data of other users. A dedicated '/roles_admin' collection grants
+ * administrative privileges, allowing admins to read all user data and manage
+ * system-wide collections.
+ *
+ * Data Structure:
+ * - /user_profiles/{userId}: Top-level collection storing each user's profile.
+ *   The document ID matches the user's Authentication UID.
+ * - /user_profiles/{userId}/visits/{visitId}: A subcollection containing a
+ *   user's visit history, ensuring data is logically nested under its owner.
+ * - /visit_purposes/{purposeId}: A globally readable collection that defines
+ *   predefined reasons for a visit. It is write-protected for admins only.
+ * - /roles_admin/{adminId}: A system collection for RBAC. The existence of a
+ *   document with an ID matching a user's UID grants them admin privileges.
+ *
+ * Key Security Decisions:
+ * - Default Deny: All paths are closed by default.
+ * - User Isolation: Users cannot list, read, or write other users' profiles
+ *   or visit data. Listing all users is explicitly forbidden for non-admins.
+ * - Admin Privilege via Existence: Administrator status is determined by the
+ *   existence of a document in the '/roles_admin' collection, which is a
+ *   secure and performant way to manage roles. Client-side modification of
+ *   roles is disabled.
+ * - Public Data Segregation: Data readable by all authenticated users
+ *   (visit_purposes) is stored in a separate top-level collection to simplify
+ *   read rules and secure list queries.
+ *
+ * Denormalization for Authorization:
+ * - To ensure performant and secure access, the `userId` is denormalized
+ *   (copied) into each document within the `/visits` subcollection. This allows
+ *   rules to authorize access without needing a slow and costly `get()` call to
+ *   the parent `user_profile` document.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for readable and maintainable rules.
+    
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    /**
+     * Checks if the currently authenticated user is an administrator.
+     * Admin status is granted by the existence of a document in the 'roles_admin'
+     * collection with an ID matching the user's UID.
+     */
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+    
+    /**
+     * Checks if the requesting user's UID matches the provided userId.
+     * This is the primary function for enforcing document ownership.
+     */
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    /**
+     * Verifies that a document already exists.
+     * Crucial for update and delete operations to prevent acting on non-existent data.
+     */
+    function isExistingDoc() {
+      return resource != null;
+    }
+
+    /**
+     * @description Rules for a user's own profile document.
+     * @path /user_profiles/{userId}
+     * @allow (create) An authenticated user creating their own profile document for the first time.
+     * @deny (get) A regular user trying to read another user's profile document.
+     * @principle Restricts access to a user's own data tree and enforces self-creation.
+     */
+    match /user_profiles/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isOwner(userId) && isExistingDoc() && request.resource.data.id == resource.data.id;
+      allow delete: if isOwner(userId) && isExistingDoc();
+      
+      /**
+       * @description Rules for a user's visit records, nested under their profile.
+       * @path /user_profiles/{userId}/visits/{visitId}
+       * @allow (create) An authenticated user creating a new visit record for themselves.
+       * @deny (update) A user attempting to modify a visit record belonging to another user.
+       * @principle Enforces document ownership within a subcollection. Validates denormalized `userId` for integrity.
+       */
+      match /visits/{visitId} {
+        allow get: if isOwner(userId) || isAdmin();
+        allow list: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isOwner(userId) && isExistingDoc() && request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(userId) && isExistingDoc();
+      }
+    }
+
+    /**
+     * @description Rules for the globally available list of visit purposes.
+     * @path /visit_purposes/{purposeId}
+     * @allow (list) Any authenticated user can read the list of visit purposes to display in the UI.
+     * @deny (create) A regular, non-admin user attempting to add a new visit purpose.
+     * @principle Segregates public read-only data from private data. Writes are restricted to admins.
+     */
+    match /visit_purposes/{purposeId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && isExistingDoc();
+      allow delete: if isAdmin() && isExistingDoc();
+    }
+
+    /**
+     * @description System-level rules for the admin role collection.
+     * @path /roles_admin/{adminId}
+     * @allow (get) An admin checking for the existence of their own role document.
+     * @deny (list) Any user attempting to list all administrators to prevent enumeration.
+     * @deny (create, update, delete) All client-side writes are forbidden to prevent self-promotion to admin.
+     * @principle Secures a critical system collection by making it read-only and preventing enumeration.
+     */
+    match /roles_admin/{adminId} {
+      allow get: if isAdmin();
+      allow list: if false;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}
