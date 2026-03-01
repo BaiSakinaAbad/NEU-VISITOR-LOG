@@ -2,6 +2,8 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
+import { FirebaseClientProvider } from '@/firebase';
+import { AuthWatcher } from '@/components/AuthWatcher';
 
 export const metadata: Metadata = {
   title: 'NEU Library Visitor Log',
@@ -21,9 +23,14 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body className={cn("min-h-screen bg-background font-body antialiased")}>
-        {children}
+        <FirebaseClientProvider>
+          <AuthWatcher />
+          {children}
+        </FirebaseClientProvider>
         <Toaster />
       </body>
     </html>
   );
 }
+
+    

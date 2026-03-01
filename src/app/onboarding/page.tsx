@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { useUser, useFirestore, updateDocumentNonBlocking } from "@/firebase";
+import { doc } from "firebase/firestore";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +32,7 @@ import {
 } from "@/components/ui/select";
 import { affiliations } from "@/lib/data";
 import { Icons } from "@/components/icons";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   affiliation: z.string({
@@ -40,12 +42,30 @@ const formSchema = z.object({
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
   });
 
   function onSubmit(data: z.infer<typeof formSchema>) {
+    if (!user || !firestore) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Error",
+        description: "You must be logged in to set an affiliation.",
+      });
+      return;
+    }
+
+    const userRef = doc(firestore, 'user_profiles', user.uid);
+    updateDocumentNonBlocking(userRef, {
+      affiliation: data.affiliation,
+      updatedAt: new Date().toISOString(),
+    });
+
     toast({
       title: "Affiliation Saved",
       description: `Your affiliation is set to ${data.affiliation}.`,
@@ -98,3 +118,5 @@ export default function OnboardingPage() {
     </div>
   );
 }
+
+    

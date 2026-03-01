@@ -2,7 +2,9 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useAuth, useUser } from '@/firebase';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,13 +19,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Icons } from "@/components/icons";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
   const router = useRouter();
   const bgImage = PlaceHolderImages.find((img) => img.id === "login-background");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const { toast } = useToast();
+  const auth = useAuth();
+  const { user, isUserLoading } = useUser();
+
+  useEffect(() => {
+    if (user && !isUserLoading) {
+      router.push('/purpose');
+    }
+  }, [user, isUserLoading, router]);
 
   const handleSignIn = () => {
     if (email === "admin@neu.edu.ph" && password === "Adminsir") {
@@ -41,6 +52,21 @@ export default function LoginPage() {
         variant: "destructive",
         title: "Login Failed",
         description: "Please enter both email and password.",
+      });
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      // The useEffect hook will handle redirection upon successful login.
+    } catch (error) {
+      console.error("Google Sign-In Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Google Sign-In Failed",
+        description: "Could not sign in with Google. Please try again.",
       });
     }
   };
@@ -103,7 +129,7 @@ export default function LoginPage() {
                 </span>
                 </div>
             </div>
-            <Button variant="secondary" className="w-full">
+            <Button variant="secondary" className="w-full" onClick={handleGoogleSignIn}>
                 <Icons.google className="mr-2 h-5 w-5" />
                 Sign in with Google
             </Button>
@@ -117,3 +143,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    
