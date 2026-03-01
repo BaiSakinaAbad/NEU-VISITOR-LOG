@@ -40,8 +40,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       isActive={pathname === '/admin/dashboard'}
                       tooltip="Dashboard"
                     >
-                      <Home />
-                      <span>Dashboard</span>
+                      <a>
+                        <Home />
+                        <span>Dashboard</span>
+                      </a>
                     </SidebarMenuButton>
                   </Link>
                 </SidebarMenuItem>
@@ -52,8 +54,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       isActive={pathname.startsWith('/admin/users')}
                       tooltip="User Management"
                     >
-                      <Users />
-                      <span>User Management</span>
+                      <a>
+                        <Users />
+                        <span>User Management</span>
+                      </a>
                     </SidebarMenuButton>
                   </Link>
                 </SidebarMenuItem>
