@@ -1,9 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, LogIn, UserPlus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +12,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Icons } from "@/components/icons";
 
@@ -47,11 +47,16 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-            <Button onClick={() => router.push('/onboarding')} className="w-full" size="lg">
-                <UserPlus className="mr-2 h-5 w-5" /> First-time Visitor
-            </Button>
-            <Button onClick={() => router.push('/purpose')} className="w-full" size="lg">
-                <LogIn className="mr-2 h-5 w-5" /> Returning Visitor
+            <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" placeholder="name@example.com" />
+            </div>
+            <div className="grid gap-2">
+                <Label htmlFor="password">Password</Label>
+                <Input id="password" type="password" />
+            </div>
+            <Button onClick={() => router.push('/purpose')} className="w-full">
+                Sign In
             </Button>
             <div className="relative">
                 <div className="absolute inset-0 flex items-center">
@@ -63,15 +68,12 @@ export default function LoginPage() {
                 </span>
                 </div>
             </div>
-            <Button variant="secondary" className="w-full" size="lg">
+            <Button variant="secondary" className="w-full">
                 <Icons.google className="mr-2 h-5 w-5" />
                 Sign in with Google
             </Button>
         </CardContent>
         <CardFooter className="flex-col gap-2">
-            <Button onClick={() => router.push('/admin/dashboard')} variant="link" size="sm">
-                Admin Login
-            </Button>
             <p className="text-center text-xs text-muted-foreground">
                 By signing in, you agree to our terms of service.
             </p>
