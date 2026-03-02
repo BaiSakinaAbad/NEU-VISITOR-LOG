@@ -18,7 +18,7 @@ export function AuthWatcher() {
     if (!user || !firestore || !auth) return;
 
     const handleUserAuth = async (firebaseUser: FirebaseUser) => {
-        // Domain validation
+        // Domain validation for all users
       if (!firebaseUser.email?.endsWith('@neu.edu.ph')) {
         toast({
           variant: 'destructive',
@@ -35,10 +35,15 @@ export function AuthWatcher() {
 
         if (!userDoc.exists()) {
           // User is new, create a profile document.
+          const nameFromEmail = firebaseUser.email?.split('@')[0];
+          const capitalizedName = nameFromEmail 
+            ? nameFromEmail.charAt(0).toUpperCase() + nameFromEmail.slice(1) 
+            : 'Library User';
+
           const newUserProfile = {
             id: firebaseUser.uid,
             email: firebaseUser.email || '',
-            displayName: firebaseUser.displayName || 'Anonymous User',
+            displayName: firebaseUser.displayName || capitalizedName,
             affiliation: 'Unknown', // Default value, user will set this in onboarding
             isBlocked: false,
             createdAt: new Date().toISOString(),
@@ -48,10 +53,17 @@ export function AuthWatcher() {
           setDocumentNonBlocking(userRef, newUserProfile, { merge: false });
         } else {
           // Existing user, update last login time and update timestamp.
-          updateDocumentNonBlocking(userRef, {
+          const updateData: any = {
             lastLoginAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-          });
+          };
+
+           // If displayName from Google is available and different from the one in DB, update it.
+           if (firebaseUser.displayName && firebaseUser.displayName !== userDoc.data()?.displayName) {
+            updateData.displayName = firebaseUser.displayName;
+          }
+
+          updateDocumentNonBlocking(userRef, updateData);
         }
       } catch (error) {
         console.error("Error handling user authentication state:", error);

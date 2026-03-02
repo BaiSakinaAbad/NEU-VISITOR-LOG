@@ -27,7 +27,7 @@ export function Header() {
   const auth = useAuth();
 
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'user_profiles', user.uid) : null, [firestore, user]);
-  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   const adminRoleRef = useMemoFirebase(() => user ? doc(firestore, 'roles_admin', user.uid) : null, [firestore, user]);
   const { data: adminRole } = useDoc(adminRoleRef);
@@ -35,14 +35,15 @@ export function Header() {
   const isAdmin = adminRole !== null;
 
   const handleLogout = async () => {
+    if (!auth) return;
     await signOut(auth);
     router.push('/login');
   }
   
-  const userName = isAdmin ? "Jeremias C. Esperanza" : userProfile?.displayName ?? "";
-  const userEmail = isAdmin ? "admin@neu.edu.ph" : userProfile?.email ?? "";
+  const userName = userProfile?.displayName ?? "";
+  const userEmail = userProfile?.email ?? "";
   const userAvatar = user?.photoURL;
-  const userFallback = (isAdmin ? "JE" : userProfile?.displayName.split(' ').map(n => n[0]).join('')) ?? "U";
+  const userFallback = (userProfile?.displayName?.split(' ').map(n => n[0]).join('')) ?? "U";
   const profileLink = isAdmin ? '/admin/dashboard' : '/dashboard';
 
   const title = pathname.startsWith('/admin') ? "NEU Admin" : "NEU Library";
@@ -53,7 +54,7 @@ export function Header() {
         <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
             <Avatar className="h-9 w-9">
-              {isAdmin ? (
+              {isAdmin && !userAvatar ? (
                  <AvatarFallback>
                    <User className="h-5 w-5" />
                  </AvatarFallback>
@@ -69,9 +70,9 @@ export function Header() {
         <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{userName}</p>
+                <p className="text-sm font-medium leading-none">{isProfileLoading ? "Loading..." : userName}</p>
                 <p className="text-xs leading-none text-muted-foreground">
-                {userEmail}
+                {isProfileLoading ? "" : userEmail}
                 </p>
             </div>
             </DropdownMenuLabel>
