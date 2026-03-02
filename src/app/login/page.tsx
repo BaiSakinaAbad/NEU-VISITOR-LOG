@@ -97,13 +97,25 @@ export default function LoginPage() {
 
   const onEmailSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!auth) return;
+
+    // First, validate the email domain on the client side.
+    if (!values.email.endsWith('@neu.edu.ph')) {
+      toast({
+        variant: "destructive",
+        title: "Access Denied",
+        description: "Only users with a @neu.edu.ph email address are allowed.",
+      });
+      return;
+    }
+
     try {
       await signInWithEmailAndPassword(auth, values.email, values.password);
-      // The useEffect hook will handle redirection.
+      // The useEffect hook will handle redirection on successful sign-in.
     } catch (error: any) {
       console.error("Email/Password Sign-In Error:", error);
       let description = "An unexpected error occurred. Please try again.";
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+      // Provide a more specific error for invalid credentials.
+      if (error.code === 'auth/invalid-credential') {
         description = "Invalid email or password. Please check your credentials and try again.";
       }
       toast({
