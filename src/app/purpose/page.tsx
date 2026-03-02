@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useEffect } from "react";
-import { collection, doc, getDoc, setDoc } from "firebase/firestore";
+import { useEffect, useState } from "react";
+import { collection, doc } from "firebase/firestore";
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase, setDocumentNonBlocking } from "@/firebase";
 import { generatePersonalizedWelcomeMessage } from "@/ai/flows/generate-personalized-welcome-message";
 
@@ -36,10 +36,20 @@ const FormSchema = z.object({
   }),
 });
 
+const defaultPurposes: VisitPurpose[] = [
+    { id: 'reading', name: 'Reading', description: 'Reading books or other materials.' },
+    { id: 'research', name: 'Research', description: 'Conducting research for a project.' },
+    { id: 'computer-use', name: 'Computer Use', description: 'Using library computers.' },
+    { id: 'studying', name: 'Studying', description: 'Studying for exams or assignments.' },
+    { id: 'group-study', name: 'Group Study', description: 'Meeting with a group or studying together.' },
+    { id: 'borrow-return', name: 'Borrow/Return Books', description: 'Borrowing or returning books.' }
+];
+
 export default function PurposePage() {
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
+  const [isSeeding, setIsSeeding] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'user_profiles', user.uid) : null, [firestore, user]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
@@ -52,6 +62,17 @@ export default function PurposePage() {
       router.push('/onboarding');
     }
   }, [userProfile, isProfileLoading, router]);
+
+  useEffect(() => {
+    // Seed the database with some default purposes if it's empty
+    if (firestore && !arePurposesLoading && visitPurposes?.length === 0 && !isSeeding) {
+        setIsSeeding(true);
+        defaultPurposes.forEach(purpose => {
+            const docRef = doc(firestore, 'visit_purposes', purpose.id);
+            setDocumentNonBlocking(docRef, purpose, { merge: true });
+        });
+    }
+  }, [firestore, arePurposesLoading, visitPurposes, isSeeding]);
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -97,7 +118,7 @@ export default function PurposePage() {
     router.push(`/welcome?visitId=${newVisit.id}`);
   }
 
-  if (isProfileLoading || arePurposesLoading) {
+  if (isProfileLoading || arePurposesLoading || !visitPurposes || visitPurposes.length === 0) {
     return (
         <div className="flex min-h-screen items-center justify-center">
             <Icons.logo className="h-8 w-8 animate-spin text-primary" />
