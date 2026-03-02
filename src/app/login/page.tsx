@@ -1,15 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,24 +16,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-  } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import type { UserProfile } from "@/lib/schema";
 
-const formSchema = z.object({
-    email: z.string().email({ message: "Please enter a valid email." }),
-    password: z.string().min(1, { message: "Password is required." }),
-});
 
 export default function LoginPage() {
   const router = useRouter();
@@ -53,16 +36,9 @@ export default function LoginPage() {
   const adminRoleRef = useMemoFirebase(() => user ? doc(firestore, 'roles_admin', user.uid) : null, [firestore, user]);
   const { data: adminRole, isLoading: isAdminRoleLoading } = useDoc(adminRoleRef);
   
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
-
   useEffect(() => {
-    if (user && !isUserLoading && !isProfileLoading && !isAdminRoleLoading) {
+    // Redirect if user is already logged in and profile is loaded
+    if (user && userProfile && !isUserLoading && !isProfileLoading && !isAdminRoleLoading) {
       if (adminRole) {
         router.push('/admin/dashboard');
       } else if (userProfile?.affiliation === 'Unknown') {
@@ -71,29 +47,15 @@ export default function LoginPage() {
         router.push('/purpose');
       }
     }
-  }, [user, isUserLoading, userProfile, isProfileLoading, adminRole, isAdminRoleLoading, router]);
-
-  async function onEmailSubmit(values: z.infer<typeof formSchema>) {
-    if (!auth) return;
-    try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
-      // The useEffect hook will handle redirection.
-    } catch (error) {
-      console.error("Email/Password Sign-In Error:", error);
-      toast({
-        variant: "destructive",
-        title: "Sign-In Failed",
-        description: "Invalid email or password. Please try again.",
-      });
-    }
-  }
+  }, [user, userProfile, isUserLoading, isProfileLoading, adminRole, isAdminRoleLoading, router]);
 
   const handleGoogleSignIn = async () => {
     if (!auth) return;
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      // The useEffect hook will handle redirection upon successful login and profile load.
+      // The AuthWatcher will handle domain validation and profile creation.
+      // The useEffect hook will handle redirection.
     } catch (error) {
       console.error("Google Sign-In Error:", error);
       toast({
@@ -137,53 +99,10 @@ export default function LoginPage() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-headline">Visitor Log-In</CardTitle>
           <CardDescription>
-            Enter your credentials to log your visit
+            Please sign in with your NEU Google Account.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(onEmailSubmit)} className="space-y-4">
-                    <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                            <Input placeholder="name@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                            <Input type="password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                        {form.formState.isSubmitting ? "Signing In..." : "Sign In"}
-                    </Button>
-                </form>
-            </Form>
-            <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">
-                    Or continue with
-                    </span>
-                </div>
-            </div>
             <Button variant="secondary" className="w-full" onClick={handleGoogleSignIn}>
                 <Icons.google className="mr-2 h-5 w-5" />
                 Sign in with Google
@@ -191,7 +110,7 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter className="flex-col gap-4">
             <p className="text-center text-xs text-muted-foreground">
-                By signing in, you agree to our terms of service.
+                Only accounts with @neu.edu.ph are permitted.
             </p>
         </CardFooter>
       </Card>
