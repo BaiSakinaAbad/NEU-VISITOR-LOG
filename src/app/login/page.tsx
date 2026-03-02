@@ -46,9 +46,6 @@ export default function LoginPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'user_profiles', user.uid) : null, [firestore, user]);
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
-
   const adminRoleRef = useMemoFirebase(() => user ? doc(firestore, 'roles_admin', user.uid) : null, [firestore, user]);
   const { data: adminRole, isLoading: isAdminRoleLoading } = useDoc(adminRoleRef);
   
@@ -61,39 +58,28 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    // Wait for auth state and roles to be determined.
+    // Wait for the primary loading states to resolve.
     if (isUserLoading || isAdminRoleLoading) {
-      return; // Still loading, wait for next effect run.
+      return; 
     }
 
-    // If user is not logged in, do nothing.
+    // If there's no user, stay on the login page.
     if (!user) {
-        return;
-    }
-
-    // If admin role is confirmed, redirect to admin dashboard immediately.
-    if (adminRole) {
-      router.push('/admin/dashboard');
       return;
     }
 
-    // If not an admin, proceed with the regular user flow.
-    // Now we need to wait for the profile to load.
-    if (isProfileLoading) {
-      return; // Wait for profile to load.
+    // User is authenticated and their role has been checked.
+    if (adminRole) {
+      // If they are an admin, redirect to the admin dashboard.
+      router.push('/admin/dashboard');
+    } else {
+      // If they are a regular user, redirect to the purpose page.
+      // The purpose page will then handle checking for onboarding.
+      router.push('/purpose');
     }
     
-    // Once profile is loaded, check for onboarding.
-    if (userProfile) {
-      if (userProfile.affiliation === 'Unknown') {
-        router.push('/onboarding');
-      } else {
-        router.push('/purpose');
-      }
-    }
-    // If userProfile is null here, AuthWatcher is probably still creating it.
-    // The effect will re-run when userProfile data changes.
-  }, [user, isUserLoading, adminRole, isAdminRoleLoading, userProfile, isProfileLoading, router]);
+  }, [user, isUserLoading, adminRole, isAdminRoleLoading, router]);
+
 
   const onEmailSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!auth) return;
@@ -143,7 +129,7 @@ export default function LoginPage() {
     }
   };
 
-  if (isUserLoading || (user && (isProfileLoading || isAdminRoleLoading))) {
+  if (isUserLoading || (user && isAdminRoleLoading)) {
       return (
         <div className="relative flex min-h-screen flex-col items-center justify-center">
             <div className="flex items-center gap-2">
