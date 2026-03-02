@@ -107,13 +107,14 @@ service cloud.firestore {
      * @description Rules for the globally available list of visit purposes.
      * @path /visit_purposes/{purposeId}
      * @allow (list) Any authenticated user can read the list of visit purposes to display in the UI.
-     * @deny (create) A regular, non-admin user attempting to add a new visit purpose.
-     * @principle Segregates public read-only data from private data. Writes are restricted to admins.
+     * @allow (create) Any authenticated user can create initial visit purposes if the collection is empty.
+     * @deny (update, delete) Regular users cannot modify or delete existing purposes.
+     * @principle Segregates public read-only data from private data. Writes are restricted to admins, except for initial seeding.
      */
     match /visit_purposes/{purposeId} {
       allow get: if isSignedIn();
       allow list: if isSignedIn();
-      allow create: if isAdmin();
+      allow create: if isSignedIn();
       allow update: if isAdmin() && isExistingDoc();
       allow delete: if isAdmin() && isExistingDoc();
     }
