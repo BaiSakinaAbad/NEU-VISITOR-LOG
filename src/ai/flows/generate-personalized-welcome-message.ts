@@ -47,8 +47,19 @@ const generatePersonalizedWelcomeMessageFlow = ai.defineFlow(
     inputSchema: GeneratePersonalizedWelcomeMessageInputSchema,
     outputSchema: GeneratePersonalizedWelcomeMessageOutputSchema,
   },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
+  async (input) => {
+    try {
+        const {output} = await prompt(input);
+        if (output) {
+            return output;
+        }
+    } catch (error) {
+        console.error("AI welcome message generation failed. Using default.", error);
+    }
+
+    // Fallback message
+    return {
+        welcomeMessage: `Welcome to NEU Library, ${input.username}! We're glad to have you.`
+    };
   }
 );

@@ -87,17 +87,11 @@ export default function PurposePage() {
         return;
     }
 
-    let welcomeMessage = `Welcome to NEU Library, ${userProfile.displayName}! We're glad to have you.`;
-    try {
-        const result = await generatePersonalizedWelcomeMessage({
-            username: userProfile.displayName,
-            affiliation: userProfile.affiliation,
-            visitPurpose: data.purposes,
-        });
-        welcomeMessage = result.welcomeMessage;
-    } catch (error) {
-        console.error("Failed to generate welcome message, using default.", error);
-    }
+    const result = await generatePersonalizedWelcomeMessage({
+        username: userProfile.displayName,
+        affiliation: userProfile.affiliation,
+        visitPurpose: data.purposes,
+    });
     
     const newVisitRef = doc(collection(firestore, 'user_profiles', user.uid, 'visits'));
     const newVisit = {
@@ -105,7 +99,7 @@ export default function PurposePage() {
       userId: user.uid,
       visitDateTime: new Date().toISOString(),
       purposeIds: data.purposes,
-      welcomeMessage: welcomeMessage,
+      welcomeMessage: result.welcomeMessage,
     };
     
     setDocumentNonBlocking(newVisitRef, newVisit, { merge: false });
