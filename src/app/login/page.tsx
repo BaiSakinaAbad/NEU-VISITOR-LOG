@@ -190,12 +190,6 @@ export default function LoginPage() {
             </Button>
         </CardContent>
         <CardFooter className="flex-col gap-4">
-            <p className="text-center text-sm text-muted-foreground">
-                Don't have an account?{" "}
-                <Link href="/signup" className="underline hover:text-primary">
-                    Sign up
-                </Link>
-            </p>
             <p className="text-center text-xs text-muted-foreground">
                 By signing in, you agree to our terms of service.
             </p>
