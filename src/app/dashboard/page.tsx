@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CalendarDays, Users, LogIn } from "lucide-react";
+import { CalendarDays, LogIn } from "lucide-react";
 import { format, getMonth } from 'date-fns';
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import { doc, collection, query, orderBy, limit } from "firebase/firestore";
@@ -32,9 +32,6 @@ export default function DashboardPage() {
   const visitsRef = useMemoFirebase(() => user ? query(collection(firestore, 'user_profiles', user.uid, 'visits'), orderBy('visitDateTime', 'desc')) : null, [firestore, user]);
   const { data: userVisits, isLoading: areVisitsLoading } = useCollection<Visit>(visitsRef);
   
-  const allUsersRef = useMemoFirebase(() => firestore ? collection(firestore, 'user_profiles') : null, [firestore]);
-  const { data: allUsers, isLoading: areAllUsersLoading } = useCollection(allUsersRef);
-
   const visitsThisMonth = userVisits?.filter(v => getMonth(new Date(v.visitDateTime)) === getMonth(new Date())).length ?? 0;
 
   return (
@@ -49,7 +46,7 @@ export default function DashboardPage() {
         )}
         <p className="text-muted-foreground">Here's your library activity overview.</p>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -75,18 +72,6 @@ export default function DashboardPage() {
             <div className="text-2xl font-bold">{areVisitsLoading ? <Skeleton className="h-8 w-10"/> : userVisits?.length ?? 0}</div>
             <p className="text-xs text-muted-foreground">
               Since your first visit
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Library Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{areAllUsersLoading ? <Skeleton className="h-8 w-10"/> : allUsers?.length ?? 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Registered in the system
             </p>
           </CardContent>
         </Card>
