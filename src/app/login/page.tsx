@@ -61,17 +61,39 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    // Redirect if user is already logged in and profile is loaded
-    if (user && userProfile && !isUserLoading && !isProfileLoading && !isAdminRoleLoading) {
-      if (adminRole) {
-        router.push('/admin/dashboard');
-      } else if (userProfile?.affiliation === 'Unknown') {
+    // Wait for auth state and roles to be determined.
+    if (isUserLoading || isAdminRoleLoading) {
+      return; // Still loading, wait for next effect run.
+    }
+
+    // If user is not logged in, do nothing.
+    if (!user) {
+        return;
+    }
+
+    // If admin role is confirmed, redirect to admin dashboard immediately.
+    if (adminRole) {
+      router.push('/admin/dashboard');
+      return;
+    }
+
+    // If not an admin, proceed with the regular user flow.
+    // Now we need to wait for the profile to load.
+    if (isProfileLoading) {
+      return; // Wait for profile to load.
+    }
+    
+    // Once profile is loaded, check for onboarding.
+    if (userProfile) {
+      if (userProfile.affiliation === 'Unknown') {
         router.push('/onboarding');
       } else {
         router.push('/purpose');
       }
     }
-  }, [user, userProfile, isUserLoading, isProfileLoading, adminRole, isAdminRoleLoading, router]);
+    // If userProfile is null here, AuthWatcher is probably still creating it.
+    // The effect will re-run when userProfile data changes.
+  }, [user, isUserLoading, adminRole, isAdminRoleLoading, userProfile, isProfileLoading, router]);
 
   const onEmailSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!auth) return;

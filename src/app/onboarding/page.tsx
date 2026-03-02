@@ -4,8 +4,9 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useUser, useFirestore, updateDocumentNonBlocking } from "@/firebase";
+import { useUser, useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
+import { useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +46,16 @@ export default function OnboardingPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  
+  const adminRoleRef = useMemoFirebase(() => user ? doc(firestore, 'roles_admin', user.uid) : null, [firestore, user]);
+  const { data: adminRole, isLoading: isAdminRoleLoading } = useDoc(adminRoleRef);
+
+  useEffect(() => {
+    if (!isAdminRoleLoading && adminRole) {
+        router.push('/admin/dashboard');
+    }
+  }, [adminRole, isAdminRoleLoading, router]);
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -118,5 +129,3 @@ export default function OnboardingPage() {
     </div>
   );
 }
-
-    
