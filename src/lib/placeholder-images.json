@@ -3,7 +3,7 @@
     {
       "id": "login-background",
       "description": "An illustration of the New Era University building.",
-      "imageUrl": "/images/neu-background.jpg",
+      "imageUrl": "/neu-background.jpg",
       "imageHint": "university building illustration"
     }
   ]
