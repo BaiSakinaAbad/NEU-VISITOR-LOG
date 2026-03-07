@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -34,6 +35,7 @@ import {
 import { affiliations } from "@/lib/data";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 const formSchema = z.object({
   affiliation: z.string({
@@ -46,6 +48,7 @@ export default function OnboardingPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const bgImage = PlaceHolderImages.find((img) => img.id === "login-background");
   
   const adminRoleRef = useMemoFirebase(() => user ? doc(firestore, 'roles_admin', user.uid) : null, [firestore, user]);
   const { data: adminRole, isLoading: isAdminRoleLoading } = useDoc(adminRoleRef);
@@ -85,7 +88,17 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background/80 p-4">
+    <div className="relative flex min-h-screen items-center justify-center p-4">
+      {bgImage && (
+        <Image
+          src={bgImage.imageUrl}
+          alt={bgImage.description}
+          fill
+          className="absolute inset-0 -z-10 object-cover opacity-30"
+          data-ai-hint={bgImage.imageHint}
+        />
+      )}
+      <div className="absolute inset-0 -z-10 bg-background/80" />
        <Card className="w-full max-w-md">
         <CardHeader className="text-center">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">

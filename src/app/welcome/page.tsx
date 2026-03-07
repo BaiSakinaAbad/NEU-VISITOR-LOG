@@ -1,8 +1,8 @@
 "use client";
 
 import { Suspense } from 'react';
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
 import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Visit } from '@/lib/schema';
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Icons } from "@/components/icons";
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 function WelcomeMessage() {
   const router = useRouter();
@@ -25,6 +26,7 @@ function WelcomeMessage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const visitId = searchParams.get('visitId');
+  const bgImage = PlaceHolderImages.find((img) => img.id === "login-background");
 
   const visitRef = useMemoFirebase(() => {
     if (!user || !firestore || !visitId) return null;
@@ -34,7 +36,17 @@ function WelcomeMessage() {
   const { data: visit, isLoading } = useDoc<Visit>(visitRef);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background/80 p-4">
+    <div className="relative flex min-h-screen items-center justify-center p-4">
+      {bgImage && (
+        <Image
+          src={bgImage.imageUrl}
+          alt={bgImage.description}
+          fill
+          className="absolute inset-0 -z-10 object-cover opacity-30"
+          data-ai-hint={bgImage.imageHint}
+        />
+      )}
+      <div className="absolute inset-0 -z-10 bg-background/80" />
       <Card className="w-full max-w-md text-center">
         <CardHeader>
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
