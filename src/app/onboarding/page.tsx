@@ -94,11 +94,11 @@ export default function OnboardingPage() {
           src={bgImage.imageUrl}
           alt={bgImage.description}
           fill
-          className="absolute inset-0 -z-10 object-cover opacity-30"
+          className="absolute inset-0 -z-10 object-cover"
           data-ai-hint={bgImage.imageHint}
         />
       )}
-      <div className="absolute inset-0 -z-10 bg-background/80" />
+      <div className="absolute inset-0 -z-10 bg-white/70" />
        <Card className="w-full max-w-md">
         <CardHeader className="text-center">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">

@@ -106,7 +106,7 @@ export default function LoginPage() {
           description = "The admin account may not be set up. Please ensure you have created this user in the Firebase Authentication console with the correct email and password.";
         } else {
           // For regular users, the error could be a wrong password or the user not existing.
-          description = "Invalid email or password. Please check your credentials. If this is your first time logging in, your account may not have been created in the system yet.";
+          description = "Invalid email or password. Please check your credentials. If this is your first time, your account may not have been created in the system yet.";
         }
       }
       toast({
@@ -152,11 +152,11 @@ export default function LoginPage() {
           src={bgImage.imageUrl}
           alt={bgImage.description}
           fill
-          className="absolute inset-0 -z-10 object-cover opacity-30"
+          className="absolute inset-0 -z-10 object-cover"
           data-ai-hint={bgImage.imageHint}
         />
       )}
-      <div className="absolute inset-0 -z-10 bg-background/80" />
+      <div className="absolute inset-0 -z-10 bg-white/70" />
       
       <div className="mb-4 flex items-center gap-3 text-2xl font-bold text-primary">
           <Icons.logo className="h-8 w-8" />

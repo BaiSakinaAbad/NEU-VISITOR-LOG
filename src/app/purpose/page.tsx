@@ -78,17 +78,14 @@ export default function PurposePage() {
   }, [userProfile, isProfileLoading, router, adminRole, isAdminRoleLoading]);
 
   useEffect(() => {
-    // Seed the database with default purposes if they don't exist.
-    if (firestore && visitPurposes && !arePurposesLoading && !isSeeding) {
-        setIsSeeding(true); // Prevents re-seeding
+    if (firestore && visitPurposes !== null && !arePurposesLoading && !isSeeding) {
+        setIsSeeding(true); 
 
         const existingPurposeIds = new Set(visitPurposes.map(p => p.id));
 
         defaultPurposes.forEach(purpose => {
-            // Only write the purpose if it doesn't already exist in the collection.
             if (!existingPurposeIds.has(purpose.id)) {
                 const docRef = doc(firestore, 'visit_purposes', purpose.id);
-                // Use set without merge, as we know it's a new document.
                 setDocumentNonBlocking(docRef, purpose, { merge: false });
             }
         });
@@ -149,11 +146,11 @@ export default function PurposePage() {
           src={bgImage.imageUrl}
           alt={bgImage.description}
           fill
-          className="absolute inset-0 -z-10 object-cover opacity-30"
+          className="absolute inset-0 -z-10 object-cover"
           data-ai-hint={bgImage.imageHint}
         />
       )}
-      <div className="absolute inset-0 -z-10 bg-background/80" />
+      <div className="absolute inset-0 -z-10 bg-white/70" />
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
