@@ -42,7 +42,10 @@ const defaultPurposes: VisitPurpose[] = [
     { id: 'computer-use', name: 'Computer Use', description: 'Using library computers.' },
     { id: 'studying', name: 'Studying', description: 'Studying for exams or assignments.' },
     { id: 'group-study', name: 'Group Study', description: 'Meeting with a group or studying together.' },
-    { id: 'borrow-return', name: 'Borrow/Return Books', description: 'Borrowing or returning books.' }
+    { id: 'borrow-return', name: 'Borrow/Return Books', description: 'Borrowing or returning books.' },
+    { id: 'student-lounge', name: 'Student Lounge', description: 'Using the student lounge.' },
+    { id: 'sleep', name: 'Sleep', description: 'Resting or sleeping.' },
+    { id: 'others', name: 'Others', description: 'Other purposes.' },
 ];
 
 export default function PurposePage() {
