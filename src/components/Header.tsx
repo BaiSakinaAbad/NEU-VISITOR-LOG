@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, ChevronDown } from "lucide-react";
 import { Icons } from "./icons";
 import { useUser, useDoc, useFirestore, useMemoFirebase, useAuth } from "@/firebase";
 import { signOut } from "firebase/auth";
@@ -52,19 +52,20 @@ export function Header() {
   const UserMenu = (
     <DropdownMenu>
         <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-            <Avatar className="h-9 w-9">
-              {isAdmin && !userAvatar ? (
-                 <AvatarFallback>
-                   <User className="h-5 w-5" />
-                 </AvatarFallback>
-              ) : (
-                <>
-                  {userAvatar && <AvatarImage src={userAvatar} alt={userName} />}
-                  <AvatarFallback>{userFallback}</AvatarFallback>
-                </>
-              )}
-            </Avatar>
+            <Button variant="outline" className="flex items-center gap-2 rounded-full pl-1 pr-2 py-1 h-auto">
+              <Avatar className="h-8 w-8">
+                {isAdmin && !userAvatar ? (
+                   <AvatarFallback>
+                     <User className="h-5 w-5" />
+                   </AvatarFallback>
+                ) : (
+                  <>
+                    {userAvatar && <AvatarImage src={userAvatar} alt={userName} />}
+                    <AvatarFallback>{userFallback}</AvatarFallback>
+                  </>
+                )}
+              </Avatar>
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="end" forceMount>
@@ -95,7 +96,7 @@ export function Header() {
   }
   
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background shadow-sm">
+    <header className="sticky top-0 z-40 w-full border-b bg-white shadow-sm">
       <div className="container flex h-16 items-center space-x-4 px-4 md:px-8 sm:justify-between sm:space-x-0">
         <div className="flex items-center gap-2">
           <Link href={titleLink} className="flex items-center gap-2">
