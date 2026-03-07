@@ -41,7 +41,7 @@ export default function DashboardPage() {
           <Skeleton className="h-9 w-1/2" />
         ) : (
           <h1 className="text-3xl font-bold tracking-tight font-headline">
-            Welcome back, {userProfile?.displayName.split(' ')[0]}!
+            Welcome back, {userProfile?.displayName ? userProfile.displayName.split(' ')[0] : ''}!
           </h1>
         )}
         <p className="text-muted-foreground">Here's your library activity overview.</p>
