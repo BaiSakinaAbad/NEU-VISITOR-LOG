@@ -2,9 +2,9 @@
   "placeholderImages": [
     {
       "id": "login-background",
-      "description": "Exterior of a university building.",
-      "imageUrl": "https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=1920&q=80",
-      "imageHint": "university building"
+      "description": "An illustration of the New Era University building.",
+      "imageUrl": "/images/neu-background.jpg",
+      "imageHint": "university building illustration"
     }
   ]
 }
