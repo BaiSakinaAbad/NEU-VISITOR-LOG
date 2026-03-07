@@ -75,15 +75,15 @@ export default function PurposePage() {
   }, [userProfile, isProfileLoading, router, adminRole, isAdminRoleLoading]);
 
   useEffect(() => {
-    // Seed the database with some default purposes if it's empty
-    if (firestore && !arePurposesLoading && visitPurposes?.length === 0 && !isSeeding) {
-        setIsSeeding(true);
+    // Seed the database with default purposes, merging with any existing ones.
+    if (firestore && !arePurposesLoading && !isSeeding) {
+        setIsSeeding(true); // Prevents re-seeding on subsequent renders
         defaultPurposes.forEach(purpose => {
             const docRef = doc(firestore, 'visit_purposes', purpose.id);
             setDocumentNonBlocking(docRef, purpose, { merge: true });
         });
     }
-  }, [firestore, arePurposesLoading, visitPurposes, isSeeding]);
+  }, [firestore, arePurposesLoading, isSeeding]);
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -124,7 +124,7 @@ export default function PurposePage() {
     router.push(`/welcome?visitId=${newVisit.id}`);
   }
 
-  if (isProfileLoading || arePurposesLoading || !visitPurposes || visitPurposes.length === 0 || isAdminRoleLoading) {
+  if (isProfileLoading || arePurposesLoading || !visitPurposes || isAdminRoleLoading) {
     return (
         <div className="flex min-h-screen items-center justify-center">
             <Icons.logo className="h-8 w-8 animate-spin text-primary" />
