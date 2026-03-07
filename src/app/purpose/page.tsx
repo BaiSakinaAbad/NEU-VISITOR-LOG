@@ -7,7 +7,7 @@ import * as z from "zod";
 import { useEffect, useState } from "react";
 import { collection, doc } from "firebase/firestore";
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase, setDocumentNonBlocking } from "@/firebase";
-import { generatePersonalizedWelcomeMessage } from "@/ai/flows/generate-personalized-welcome-message";
+// import { generatePersonalizedWelcomeMessage } from "@/ai/flows/generate-personalized-welcome-message";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -95,11 +95,12 @@ export default function PurposePage() {
         return;
     }
 
-    const result = await generatePersonalizedWelcomeMessage({
-        username: userProfile.displayName,
-        affiliation: userProfile.affiliation,
-        visitPurpose: data.purposes,
-    });
+    // const result = await generatePersonalizedWelcomeMessage({
+    //     username: userProfile.displayName,
+    //     affiliation: userProfile.affiliation,
+    //     visitPurpose: data.purposes,
+    // });
+    const welcomeMessage = `Welcome to NEU Library, ${userProfile.displayName}! We're glad to have you.`;
     
     const newVisitRef = doc(collection(firestore, 'user_profiles', user.uid, 'visits'));
     const newVisit = {
@@ -107,7 +108,7 @@ export default function PurposePage() {
       userId: user.uid,
       visitDateTime: new Date().toISOString(),
       purposeIds: data.purposes,
-      welcomeMessage: result.welcomeMessage,
+      welcomeMessage: welcomeMessage,
     };
     
     setDocumentNonBlocking(newVisitRef, newVisit, { merge: false });
