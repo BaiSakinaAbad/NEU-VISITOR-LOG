@@ -102,7 +102,11 @@ export default function LoginPage() {
       let description = "An unexpected error occurred. Please try again.";
       // Provide a more specific error for invalid credentials.
       if (error.code === 'auth/invalid-credential') {
-        description = "Invalid email or password. Please check your credentials and try again.";
+        if (values.email === 'admin@neu.edu.ph') {
+          description = "The admin account may not be set up. Please ensure you have created this user in the Firebase Authentication console with the correct email and password.";
+        } else {
+          description = "Invalid email or password. Please check your credentials and try again.";
+        }
       }
       toast({
         variant: "destructive",
