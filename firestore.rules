@@ -84,7 +84,7 @@ service cloud.firestore {
       allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isOwner(userId) && isExistingDoc() && request.resource.data.id == resource.data.id;
+      allow update: if isOwner(userId) && isExistingDoc();
       allow delete: if isOwner(userId) && isExistingDoc();
       
       /**
@@ -98,7 +98,7 @@ service cloud.firestore {
         allow get: if isOwner(userId) || isAdmin();
         allow list: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isOwner(userId) && isExistingDoc() && request.resource.data.userId == resource.data.userId;
+        allow update: if isOwner(userId) && isExistingDoc();
         allow delete: if isOwner(userId) && isExistingDoc();
       }
     }
