@@ -57,8 +57,8 @@ export default function UsersPage() {
   };
 
   const filteredUsers = users?.filter(user => 
-    user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    (user.displayName || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (user.email || '').toLowerCase().includes(searchQuery.toLowerCase())
   ) ?? [];
 
   return (
@@ -97,10 +97,10 @@ export default function UsersPage() {
                     <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9">
                             {/* <AvatarImage src={user.avatar} alt={user.name} /> */}
-                            <AvatarFallback>{user.displayName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                            <AvatarFallback>{(user.displayName || 'U').split(' ').map(n => n[0]).join('')}</AvatarFallback>
                         </Avatar>
                         <div>
-                            <div className="font-medium">{user.displayName}</div>
+                            <div className="font-medium">{user.displayName || 'Unnamed User'}</div>
                             <div className="text-sm text-muted-foreground">{user.email}</div>
                         </div>
                     </div>
@@ -131,7 +131,7 @@ export default function UsersPage() {
                             <AlertDialogHeader>
                             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                This action will {user.isBlocked ? "unblock" : "block"} {user.displayName} and {user.isBlocked ? "allow" : "prevent"} them from accessing the library system.
+                                This action will {user.isBlocked ? "unblock" : "block"} {user.displayName || 'this user'} and {user.isBlocked ? "allow" : "prevent"} them from accessing the library system.
                             </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
