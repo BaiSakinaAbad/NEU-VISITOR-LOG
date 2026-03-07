@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -157,9 +158,9 @@ export default function LoginPage() {
       )}
       <div className="absolute inset-0 -z-10 bg-white/70" />
       
-      <div className="mb-4 flex items-center gap-3 text-2xl font-bold text-primary">
-          <Icons.logo className="h-8 w-8" />
-          <h1 className="font-headline text-3xl font-bold">NEU Library</h1>
+      <div className="mb-4 flex items-center gap-4 text-2xl font-bold text-primary">
+          <Icons.logo className="h-10 w-10" />
+          <h1 className="font-headline text-4xl font-bold">NEU Library</h1>
       </div>
 
       <Card className="w-full max-w-sm bg-background shadow-md">
