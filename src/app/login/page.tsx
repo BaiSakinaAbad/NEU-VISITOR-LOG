@@ -103,11 +103,10 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, values.email, values.password);
       // The useEffect hook will handle redirection on successful sign-in.
     } catch (error: any) {
-      console.error("Email/Password Sign-In Error:", error);
       let description = "An unexpected error occurred during sign-in. Please try again later.";
       // Provide more specific feedback for invalid credentials.
       if (error.code === 'auth/invalid-credential') {
-        description = "Invalid email or password. Please check your credentials and try again. The account may not exist in the system.";
+        description = "Invalid email or password. Please check your credentials and try again.";
       }
       toast({
         variant: "destructive",
