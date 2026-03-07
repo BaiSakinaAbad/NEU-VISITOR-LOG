@@ -75,15 +75,22 @@ export default function PurposePage() {
   }, [userProfile, isProfileLoading, router, adminRole, isAdminRoleLoading]);
 
   useEffect(() => {
-    // Seed the database with default purposes, merging with any existing ones.
-    if (firestore && !arePurposesLoading && !isSeeding) {
-        setIsSeeding(true); // Prevents re-seeding on subsequent renders
+    // Seed the database with default purposes if they don't exist.
+    if (firestore && visitPurposes && !arePurposesLoading && !isSeeding) {
+        setIsSeeding(true); // Prevents re-seeding
+
+        const existingPurposeIds = new Set(visitPurposes.map(p => p.id));
+
         defaultPurposes.forEach(purpose => {
-            const docRef = doc(firestore, 'visit_purposes', purpose.id);
-            setDocumentNonBlocking(docRef, purpose, { merge: true });
+            // Only write the purpose if it doesn't already exist in the collection.
+            if (!existingPurposeIds.has(purpose.id)) {
+                const docRef = doc(firestore, 'visit_purposes', purpose.id);
+                // Use set without merge, as we know it's a new document.
+                setDocumentNonBlocking(docRef, purpose, { merge: false });
+            }
         });
     }
-  }, [firestore, arePurposesLoading, isSeeding]);
+}, [firestore, visitPurposes, arePurposesLoading, isSeeding]);
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
