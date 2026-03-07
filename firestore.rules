@@ -102,6 +102,16 @@ service cloud.firestore {
         allow delete: if isOwner(userId) && isExistingDoc();
       }
     }
+    
+    /**
+     * @description Rules for collection group queries on 'visits'.
+     * @path /{path=**}/visits/{visitId}
+     * @allow (get, list) An admin user can query across all 'visits' collections for analytics.
+     * @principle Enables admin-level aggregation queries on a specific collection group.
+     */
+    match /{path=**}/visits/{visitId} {
+        allow get, list: if isAdmin();
+    }
 
     /**
      * @description Rules for the globally available list of visit purposes.
