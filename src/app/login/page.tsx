@@ -162,9 +162,9 @@ export default function LoginPage() {
           <h1 className="font-headline text-3xl font-bold">NEU Library</h1>
       </div>
 
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm bg-background shadow-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-headline">Visitor Log-In</CardTitle>
+          <CardTitle className="text-2xl font-headline">Library Log-In</CardTitle>
           <CardDescription>
             Use your NEU account to sign in.
           </CardDescription>
