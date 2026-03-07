@@ -35,6 +35,12 @@ export function AuthWatcher() {
 
         if (!userDoc.exists()) {
           // User is new, create a profile document.
+
+          // Check if the user is an admin before creating the profile
+          const adminRoleRef = doc(firestore, 'roles_admin', firebaseUser.uid);
+          const adminRoleDoc = await getDoc(adminRoleRef);
+          const isAdmin = adminRoleDoc.exists();
+
           const nameFromEmail = firebaseUser.email?.split('@')[0];
           const capitalizedName = nameFromEmail 
             ? nameFromEmail.charAt(0).toUpperCase() + nameFromEmail.slice(1) 
@@ -44,7 +50,7 @@ export function AuthWatcher() {
             id: firebaseUser.uid,
             email: firebaseUser.email || '',
             displayName: firebaseUser.displayName || capitalizedName,
-            affiliation: 'Unknown', // Default value, user will set this in onboarding
+            affiliation: isAdmin ? 'Administrator' : 'Unknown', // Set affiliation based on role
             isBlocked: false,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),

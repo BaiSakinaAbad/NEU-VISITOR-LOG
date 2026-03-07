@@ -49,6 +49,9 @@ export default function LoginPage() {
   const adminRoleRef = useMemoFirebase(() => user ? doc(firestore, 'roles_admin', user.uid) : null, [firestore, user]);
   const { data: adminRole, isLoading: isAdminRoleLoading } = useDoc(adminRoleRef);
   
+  const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'user_profiles', user.uid) : null, [firestore, user]);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -58,27 +61,28 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    // Wait for the primary loading states to resolve.
-    if (isUserLoading || isAdminRoleLoading) {
-      return; 
+    // Wait for all loading states to resolve before making a routing decision.
+    if (isUserLoading || (user && (isAdminRoleLoading || isProfileLoading))) {
+      return;
     }
 
-    // If there's no user, stay on the login page.
+    // If no user is logged in, remain on the login page.
     if (!user) {
       return;
     }
 
-    // User is authenticated and their role has been checked.
+    // User is authenticated; now determine where to redirect them.
     if (adminRole) {
-      // If they are an admin, redirect to the admin dashboard.
+      // 1. If they are an admin, redirect to the admin dashboard.
       router.push('/admin/dashboard');
+    } else if (!userProfile || userProfile.affiliation === 'Unknown') {
+      // 2. If their profile is missing or incomplete, send to onboarding.
+      router.push('/onboarding');
     } else {
-      // If they are a regular user, redirect to the purpose page.
-      // The purpose page will then handle checking for onboarding.
+      // 3. Otherwise, they are a regular, onboarded user.
       router.push('/purpose');
     }
-    
-  }, [user, isUserLoading, adminRole, isAdminRoleLoading, router]);
+  }, [user, isUserLoading, adminRole, isAdminRoleLoading, userProfile, isProfileLoading, router]);
 
 
   const onEmailSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -102,12 +106,7 @@ export default function LoginPage() {
       let description = "An unexpected error occurred during sign-in. Please try again later.";
       // Provide more specific feedback for invalid credentials.
       if (error.code === 'auth/invalid-credential') {
-        if (values.email === 'admin@neu.edu.ph') {
-          description = "The admin account may not be set up. Please ensure you have created this user in the Firebase Authentication console with the correct email and password.";
-        } else {
-          // For regular users, the error could be a wrong password or the user not existing.
-          description = "Invalid email or password. Please check your credentials. If this is your first time, your account may not have been created in the system yet.";
-        }
+        description = "Invalid email or password. Please check your credentials and try again. The account may not exist in the system.";
       }
       toast({
         variant: "destructive",
@@ -134,7 +133,7 @@ export default function LoginPage() {
     }
   };
 
-  if (isUserLoading || (user && isAdminRoleLoading)) {
+  if (isUserLoading || (user && (isAdminRoleLoading || isProfileLoading))) {
       return (
         <div className="relative flex min-h-screen flex-col items-center justify-center">
             <div className="flex items-center gap-2">

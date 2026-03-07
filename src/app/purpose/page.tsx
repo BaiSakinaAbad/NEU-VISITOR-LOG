@@ -57,25 +57,11 @@ export default function PurposePage() {
   const [isSeeding, setIsSeeding] = useState(false);
   const bgImage = PlaceHolderImages.find((img) => img.id === "login-background");
 
-  const adminRoleRef = useMemoFirebase(() => user ? doc(firestore, 'roles_admin', user.uid) : null, [firestore, user]);
-  const { data: adminRole, isLoading: isAdminRoleLoading } = useDoc(adminRoleRef);
-
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'user_profiles', user.uid) : null, [firestore, user]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   const purposesRef = useMemoFirebase(() => firestore ? collection(firestore, 'visit_purposes') : null, [firestore]);
   const { data: visitPurposes, isLoading: arePurposesLoading } = useCollection<VisitPurpose>(purposesRef);
-
-  useEffect(() => {
-    if (!isAdminRoleLoading && adminRole) {
-        router.push('/admin/dashboard');
-        return;
-    }
-
-    if (!isProfileLoading && userProfile && userProfile.affiliation === 'Unknown') {
-      router.push('/onboarding');
-    }
-  }, [userProfile, isProfileLoading, router, adminRole, isAdminRoleLoading]);
 
   useEffect(() => {
     if (firestore && visitPurposes !== null && !arePurposesLoading && !isSeeding) {
@@ -131,7 +117,7 @@ export default function PurposePage() {
     router.push(`/welcome?visitId=${newVisit.id}`);
   }
 
-  if (isProfileLoading || arePurposesLoading || !visitPurposes || isAdminRoleLoading) {
+  if (isProfileLoading || arePurposesLoading || !visitPurposes) {
     return (
         <div className="flex min-h-screen items-center justify-center">
             <Icons.logo className="h-8 w-8 animate-spin text-primary" />
