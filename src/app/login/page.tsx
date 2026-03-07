@@ -99,13 +99,14 @@ export default function LoginPage() {
       // The useEffect hook will handle redirection on successful sign-in.
     } catch (error: any) {
       console.error("Email/Password Sign-In Error:", error);
-      let description = "An unexpected error occurred. Please try again.";
-      // Provide a more specific error for invalid credentials.
+      let description = "An unexpected error occurred during sign-in. Please try again later.";
+      // Provide more specific feedback for invalid credentials.
       if (error.code === 'auth/invalid-credential') {
         if (values.email === 'admin@neu.edu.ph') {
           description = "The admin account may not be set up. Please ensure you have created this user in the Firebase Authentication console with the correct email and password.";
         } else {
-          description = "Invalid email or password. Please check your credentials and try again.";
+          // For regular users, the error could be a wrong password or the user not existing.
+          description = "Invalid email or password. Please check your credentials. If this is your first time logging in, your account may not have been created in the system yet.";
         }
       }
       toast({
