@@ -61,7 +61,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </SidebarContent>
         </Sidebar>
         <SidebarInset className="flex flex-col">
-            <header className="flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6">
+            <header className="flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 shadow-sm">
                 <SidebarTrigger className="md:hidden" />
                 <div className="flex-1">
                     {/* Can add search here later */}
