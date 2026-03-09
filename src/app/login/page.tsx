@@ -1,10 +1,11 @@
+
 "use client";
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithRedirect, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -122,26 +123,32 @@ export default function LoginPage() {
         prompt: 'select_account'
     });
     try {
-      await signInWithPopup(auth, provider);
-      // The AuthWatcher will handle domain validation and profile creation.
-      // The useEffect hook will handle redirection.
+      await signInWithRedirect(auth, provider);
+      // The user is redirected, so the rest of the app logic will be handled by the AuthWatcher 
+      // and the useEffect hook when they are redirected back.
     } catch (error: any) {
-      // Don't show an error toast if the user simply closes the popup.
-      if (error.code === 'auth/popup-closed-by-user') {
-        return;
-      }
-      console.error("Google Sign-In Error:", error);
+      // This catch block handles synchronous errors during the redirect initiation.
       toast({
         variant: "destructive",
         title: "Google Sign-In Failed",
-        description: "Could not sign in with Google. Please try again.",
+        description: "Could not start Google Sign-In. Please check your browser settings and try again.",
       });
     }
   };
 
   if (isUserLoading || (user && (isAdminRoleLoading || isProfileLoading))) {
       return (
-        <div className="relative flex min-h-screen flex-col items-center justify-center">
+        <div className="relative flex min-h-screen flex-col items-center justify-center p-4">
+            {bgImage && (
+                <Image
+                src={bgImage.imageUrl}
+                alt={bgImage.description}
+                fill
+                className="absolute inset-0 -z-10 object-cover"
+                data-ai-hint={bgImage.imageHint}
+                />
+            )}
+            <div className="absolute inset-0 -z-10 bg-white/70" />
             <div className="flex items-center gap-2">
                 <Icons.logo className="h-8 w-8 animate-spin text-primary" />
                 <span className="text-muted-foreground">Authenticating...</span>
@@ -151,7 +158,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center">
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-background p-4">
       {bgImage && (
         <Image
           src={bgImage.imageUrl}
@@ -168,7 +175,7 @@ export default function LoginPage() {
           <h1 className="font-headline text-4xl font-bold">NEU Library</h1>
       </div>
 
-      <Card className="w-full max-w-sm bg-white shadow-lg">
+      <Card className="w-full max-w-sm bg-card shadow-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-headline">Library Log-In</CardTitle>
           <CardDescription>
