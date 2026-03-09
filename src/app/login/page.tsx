@@ -119,11 +119,18 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     if (!auth) return;
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+        prompt: 'select_account'
+    });
     try {
       await signInWithPopup(auth, provider);
       // The AuthWatcher will handle domain validation and profile creation.
       // The useEffect hook will handle redirection.
-    } catch (error) {
+    } catch (error: any) {
+      // Don't show an error toast if the user simply closes the popup.
+      if (error.code === 'auth/popup-closed-by-user') {
+        return;
+      }
       console.error("Google Sign-In Error:", error);
       toast({
         variant: "destructive",
@@ -145,7 +152,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center">
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-[#f2f3f7]">
       {bgImage && (
         <Image
           src={bgImage.imageUrl}
@@ -162,7 +169,7 @@ export default function LoginPage() {
           <h1 className="font-headline text-4xl font-bold">NEU Library</h1>
       </div>
 
-      <Card className="w-full max-w-sm bg-background shadow-md">
+      <Card className="w-full max-w-sm bg-white shadow-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-headline">Library Log-In</CardTitle>
           <CardDescription>
