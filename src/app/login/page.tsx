@@ -142,7 +142,7 @@ export default function LoginPage() {
 
   if (isUserLoading || (user && (isAdminRoleLoading || isProfileLoading))) {
       return (
-        <div className="relative flex min-h-screen flex-col items-center justify-center bg-background p-4">
+        <div className="relative flex min-h-screen flex-col items-center justify-center p-4">
             {bgImage && (
                 <Image
                 src={bgImage.imageUrl}
@@ -162,7 +162,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center bg-background p-4">
+    <div className="relative flex min-h-screen flex-col items-center justify-center p-4">
       {bgImage && (
         <Image
           src={bgImage.imageUrl}
