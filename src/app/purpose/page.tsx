@@ -137,7 +137,7 @@ export default function PurposePage() {
         />
       )}
       <div className="absolute inset-0 -z-10 bg-white/70" />
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
                 <Icons.logo className="h-8 w-8 text-primary" />

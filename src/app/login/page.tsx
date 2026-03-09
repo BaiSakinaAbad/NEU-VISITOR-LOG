@@ -1,4 +1,3 @@
-
 "use client";
 
 import Image from "next/image";
@@ -152,7 +151,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center bg-[#f2f3f7]">
+    <div className="relative flex min-h-screen flex-col items-center justify-center">
       {bgImage && (
         <Image
           src={bgImage.imageUrl}
