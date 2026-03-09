@@ -1,53 +1,56 @@
 {
   "entities": {
-    "UserProfile": {
+    "User": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "UserProfile",
+      "title": "User",
       "type": "object",
-      "description": "Stores details about a library visitor, separate from authentication credentials. This includes personal information, affiliation, and administrative flags.",
+      "description": "Represents a user of the NEU Library Visitor Log system, storing their institutional details and system status.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the UserProfile entity."
+          "description": "Unique identifier for the User entity."
         },
         "email": {
           "type": "string",
-          "description": "The user's institutional email address, used for identification and login via Google Sign-In.",
+          "description": "The institutional email address of the user, used for authentication and identification.",
           "format": "email"
         },
-        "displayName": {
+        "firstName": {
           "type": "string",
-          "description": "The user's display name, typically obtained from their Google account."
+          "description": "The first name of the user, typically obtained from the authentication system."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the user, typically obtained from the authentication system."
         },
         "affiliation": {
           "type": "string",
-          "description": "The user's college or office affiliation, collected during first-time onboarding."
+          "description": "The user's college or office affiliation, captured during their first visit to the library."
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user within the system, such as 'user' or 'admin'."
         },
         "isBlocked": {
           "type": "boolean",
-          "description": "A flag indicating whether the user has been blocked by an administrator from accessing the system."
+          "description": "A flag indicating whether the user has been blocked by an administrator from accessing the library system."
         },
         "createdAt": {
           "type": "string",
-          "description": "Timestamp indicating when this user profile was first created in the system.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when this user profile was last updated.",
+          "description": "The timestamp indicating when the user's account was first created in the system.",
           "format": "date-time"
         },
         "lastLoginAt": {
           "type": "string",
-          "description": "Timestamp of the user's most recent successful login.",
+          "description": "The timestamp of the user's most recent successful login.",
           "format": "date-time"
         }
       },
       "required": [
         "id",
         "email",
-        "displayName",
         "affiliation",
+        "role",
         "isBlocked",
         "createdAt",
         "lastLoginAt"
@@ -57,7 +60,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "VisitPurpose",
       "type": "object",
-      "description": "Defines the predefined reasons a user can select for visiting the library (e.g., reading, research).",
+      "description": "Defines a standardized reason or purpose for visiting the NEU Library, available for users to select.",
       "properties": {
         "id": {
           "type": "string",
@@ -65,7 +68,7 @@
         },
         "name": {
           "type": "string",
-          "description": "A short, descriptive name for the visit purpose (e.g., 'Reading', 'Research')."
+          "description": "The short, displayable name of the visit purpose (e.g., 'Reading', 'Research', 'Computer Use', 'Studying')."
         },
         "description": {
           "type": "string",
@@ -82,7 +85,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Visit",
       "type": "object",
-      "description": "Records each instance of a user visiting the library, including the user, visit time, and selected purposes.",
+      "description": "Logs a single instance of a user checking into the NEU Library, including their purposes and check-in/out times.",
       "properties": {
         "id": {
           "type": "string",
@@ -90,75 +93,74 @@
         },
         "userId": {
           "type": "string",
-          "description": "Reference to the UserProfile entity that made this visit. (Relationship: UserProfile 1:N Visit)"
+          "description": "Reference to the User who made this visit. (Relationship: User 1:N Visit)"
         },
-        "visitDateTime": {
+        "checkInTime": {
           "type": "string",
-          "description": "The date and time when the user logged their visit to the library.",
+          "description": "The timestamp marking when the user checked into the library.",
+          "format": "date-time"
+        },
+        "checkOutTime": {
+          "type": "string",
+          "description": "The timestamp marking when the user checked out of the library. This field can be null if the user is still present or if check-out is not recorded.",
           "format": "date-time"
         },
         "purposeIds": {
           "type": "array",
-          "description": "References to the VisitPurpose entities that describe why the user is visiting. (Relationship: Visit N:N VisitPurpose)",
+          "description": "An array of IDs referencing the VisitPurpose entities that describe the user's reason(s) for the visit. (Relationship: VisitPurpose N:N Visit)",
           "items": {
             "type": "string"
           }
-        },
-        "welcomeMessage": {
-          "type": "string",
-          "description": "The AI-generated welcome message presented to the user upon logging their visit."
         }
       },
       "required": [
         "id",
         "userId",
-        "visitDateTime",
-        "purposeIds",
-        "welcomeMessage"
+        "checkInTime",
+        "purposeIds"
       ]
     }
   },
   "auth": {
     "providers": [
       "password",
-      "anonymous",
-      "google.com"
+      "anonymous"
     ]
   },
   "firestore": {
     "structure": [
       {
-        "path": "/user_profiles/{userId}",
+        "path": "/users/{userId}",
         "definition": {
-          "entityName": "UserProfile",
+          "entityName": "User",
           "schema": {
-            "$ref": "#/backend/entities/UserProfile"
+            "$ref": "#/backend/entities/User"
           },
-          "description": "Stores individual user profiles. The 'id' field in the document will be identical to 'userId' from the path and 'request.auth.uid'. This allows direct mapping and secure path-based access. Includes 'affiliation' for onboarding and 'lastLoginAt' for tracking.",
+          "description": "Stores individual user profiles. The document ID (`userId`) must match the Firebase Authentication UID. Includes denormalized 'role' and 'isBlocked' fields for authorization. Admins can manage these documents.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique ID of the user, matching Firebase Authentication UID."
+              "description": "The unique Firebase Authentication UID of the user."
             }
           ]
         }
       },
       {
-        "path": "/user_profiles/{userId}/visits/{visitId}",
+        "path": "/users/{userId}/visits/{visitId}",
         "definition": {
           "entityName": "Visit",
           "schema": {
             "$ref": "#/backend/entities/Visit"
           },
-          "description": "Records individual visit details for each user. The 'userId' field within the Visit document denormalizes the parent 'userId' for authorization independence. Supports user-owned C/R and admin R via collection group queries.",
+          "description": "Stores individual visit logs for a specific user. 'userId' is part of the path, ensuring strong ownership and authorization independence for each visit document. Users can manage their own visits, while admins can view all visits via collection group queries.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique ID of the user, referencing the parent UserProfile."
+              "description": "The unique Firebase Authentication UID of the user who made the visit."
             },
             {
               "name": "visitId",
-              "description": "The unique ID for this specific visit record."
+              "description": "The unique identifier for a specific library visit."
             }
           ]
         }
@@ -170,11 +172,11 @@
           "schema": {
             "$ref": "#/backend/entities/VisitPurpose"
           },
-          "description": "Stores the predefined list of reasons for visiting the library. Globally readable by all authenticated users. Only administrators can create, update, or delete.",
+          "description": "Stores predefined reasons for visiting the library. This collection is globally readable by all authenticated users for selection in the UI. Writable only by administrators.",
           "params": [
             {
               "name": "purposeId",
-              "description": "The unique ID for a specific visit purpose."
+              "description": "The unique identifier for a specific visit purpose."
             }
           ]
         }
@@ -182,21 +184,31 @@
       {
         "path": "/roles_admin/{adminId}",
         "definition": {
-          "entityName": "UserProfile",
+          "entityName": "User",
           "schema": {
-            "$ref": "#/backend/entities/UserProfile"
+            "$ref": "#/backend/entities/User"
           },
-          "description": "A system collection used for Database Access Control (DBAC). The existence of a document with 'adminId' (matching a user's 'uid') grants administrative privileges. While referencing 'UserProfile' schema due to constraints, these documents only contain 'id' (matching 'adminId') and minimal fields required for existence check. This enables authorization independence for role checks.",
+          "description": "A dedicated collection to store UIDs of users who have administrator privileges. Used for quick existence checks in security rules (`exists(...)`) to grant admin access. Documents in this collection only need to contain the UID as the document ID; the content is often minimal or empty.",
           "params": [
             {
               "name": "adminId",
-              "description": "The unique ID of the user who has administrative privileges, matching their Firebase Authentication UID."
+              "description": "The unique Firebase Authentication UID of an administrator."
             }
           ]
         }
+      },
+      {
+        "path": "/statistics/daily_visitor_count",
+        "definition": {
+          "entityName": "DailyVisitorCount",
+          "schema": {
+            "$ref": "#/backend/entities/DailyVisitorCount"
+          },
+          "description": "A singleton document storing aggregated daily visitor count and other relevant statistics. Globally readable for display on dashboards, writable only by trusted backend processes (e.g., Cloud Functions).",
+          "params": []
+        }
       }
     ],
-    "reasoning": "The recommended Firestore structure prioritizes secure, scalable, and debuggable authorization rules in alignment with the core design principles. It leverages path-based ownership, structural segregation, and denormalization to ensure authorization independence and efficient querying. 1. User Profiles (/user_profiles/{userId}): Each user's primary information (UserProfile) is stored in a top-level collection, where the document ID (userId) is identical to the user's Firebase Authentication UID (request.auth.uid). This provides clear path-based ownership, enabling simple security rules such as 'allow read, update: if request.auth.uid == userId;'. The 'isBlocked' field within this document allows administrators to manage user access. 2. User Visits (/user_profiles/{userId}/visits/{visitId}): Visit records are structured as a subcollection under the respective user's profile. This hierarchical path reinforces the 1:N relationship between a UserProfile and their Visits. Critically, each Visit document includes the 'userId' field, which explicitly denormalizes the parent's owner ID. This ensures Authorization Independence: security rules for a Visit document can directly check 'resource.data.userId == request.auth.uid' without needing to perform a get() call to the parent UserProfile document. This also enables atomic creation of a user and their initial visit records if needed. The 'welcomeMessage' is stored here, generated by the AI tool. 3. Visit Purposes (/visit_purposes/{purposeId}): The predefined VisitPurpose entities are stored in a top-level collection. This collection has a homogeneous security posture: all authenticated users can read its contents for selection in the UI. Only administrators are permitted to create, update, or delete VisitPurpose documents. This segregation makes rules simple and supports QAPs for list operations by all authenticated users. 4. Administrative Roles (/roles_admin/{adminId}): A dedicated collection is used for Database Access Control (DBAC). The existence of a document in /roles_admin/{adminId} (where adminId is a user's UID) grants administrative privileges. This pattern uses 'existence over content' and allows rules to check 'get(/databases/$(database)/documents/roles_admin/$(request.auth.uid)).exists()' for administrator authorization. This ensures Authorization Independence for role checks without relying on UserProfile data, allowing for granular role management. QAPs (Queries Are Not Filters) Support: Path-Based Ownership: For /user_profiles/{userId} and /user_profiles/{userId}/visits/{visitId}, rules directly enforce ownership using the userId wildcard and the userId field in the document. This means list queries against these paths, when executed by a regular user, inherently conform to their ownership, preventing unauthorized data exposure and supporting QAPs. Structural Segregation: /visit_purposes is globally readable by authenticated users, making list queries efficient and secure for its specific access needs. Admin Access: Administrators can perform list operations on /user_profiles and use collection group queries on visits to retrieve aggregated data, with rules ensuring these broad access patterns are restricted to authenticated administrators. Regarding 'Daily Visitor Count': The application requirements include displaying a 'current number of visitors logged in for the day' and admin statistics based on daily counts. Due to the strict constraint that schema.$ref must point to one of the provided entities (UserProfile, VisitPurpose, Visit), a dedicated 'daily_statistics' collection (which would be ideal for storing this aggregate data) cannot be formally defined within this structure. This functionality would typically require a separate collection with an entityName like 'DailyStatistic'. As a workaround within the given constraints, this feature would need to be implemented either by performing expensive real-time aggregations via collection group queries on visits (potentially causing performance issues and rule complexity), or by using an external caching/aggregation service (e.g., Cloud Functions with Redis or another Firestore collection not explicitly linked to the provided entities)."
+    "reasoning": "The Firestore structure prioritizes Authorization Independence and Structural Segregation to ensure secure, scalable, and easily debuggable security rules. \n\n**Authorization Independence (CRITICAL):**\n\n1.  **User Data and Visits:** For `/users/{userId}` and `/users/{userId}/visits/{visitId}`, authorization relies directly on `request.auth.uid` matching the `{userId}` wildcard in the path. This means that a user's own data and their visits are inherently owned by them based on the document path, eliminating the need for `get()` calls to a parent document to determine ownership. Each visit document `/users/{userId}/visits/{visitId}` contains its `userId` field, reinforcing ownership and making subcollection authorization atomic and independent of the parent `user` document's attributes. This directly addresses the mandate to denormalize authorization context where a subcollection's access depends on parent attributes.\n2.  **Admin Roles:** Administrator status is determined by the existence of a document in the `/roles_admin/{adminId}` collection, where `{adminId}` is the user's `uid`. This uses the 'Existence over Content' principle, allowing a simple `exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))` check in security rules, which is highly efficient, atomic, and authorization independent.\n\n**QAPs (Rules are not Filters):**\n\n1.  **User-Specific Data:** The `/users/{userId}/visits/{visitId}` structure allows for efficient `list` operations for a specific user. A user can query their own visits, and the rules can strictly enforce `request.auth.uid == userId`, ensuring only their data is returned. For administrators, a Collection Group Query on `visits` (if enabled) or iterating through users would allow global access to all visit records while still adhering to QAPs, as the query would be fully constrained by server-side rules.\n2.  **Global Reference Data:** The `/visit_purposes` collection is designed for global read access by all authenticated users, allowing them to `list` available visit purposes. This collection holds predefined, static data that all users need to see, ensuring that `list` operations are secure and return only relevant, public data.\n3.  **Admin-Managed Data:** The `/users` collection allows administrators to `list` all users for management and search functionality, where the rules would grant access based on the `roles_admin` existence check. This supports admin-level `list` operations without relying on filtering sensitive data client-side.\n\n**Structural Segregation:**\n\n*   **User Profiles (`/users/{userId}`):** Primarily private for write operations by the owner, with admin override for management (e.g., blocking users).\n*   **User Visits (`/users/{userId}/visits/{visitId}`):** Strongly owned by the user for write operations, with admin read access for statistics.\n*   **Global Reference Data (`/visit_purposes/{purposeId}`):** Read-only for all authenticated users; writeable by admins only.\n*   **Admin Role Definition (`/roles_admin/{adminId}`):** A dedicated collection for identifying administrators, ensuring a clear and simple security posture for admin checks.\n*   **Global Statistics (`/statistics/daily_visitor_count`):** A single document, globally readable, and writable only by trusted backend processes (e.g., Cloud Functions).\n\nThis structure ensures that each collection and subcollection has a consistent security posture, simplifying rule writing and minimizing complexity."
   }
 }
-    
