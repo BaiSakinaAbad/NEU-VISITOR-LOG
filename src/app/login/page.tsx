@@ -2,13 +2,14 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { GoogleAuthProvider, signInWithRedirect, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { Eye, EyeOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +46,7 @@ export default function LoginPage() {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const [showPassword, setShowPassword] = useState(false);
 
   const adminRoleRef = useMemoFirebase(() => user ? doc(firestore, 'roles_admin', user.uid) : null, [firestore, user]);
   const { data: adminRole, isLoading: isAdminRoleLoading } = useDoc(adminRoleRef);
@@ -126,6 +128,9 @@ export default function LoginPage() {
       // The user is redirected, so the rest of the app logic will be handled by the AuthWatcher 
       // and the useEffect hook when they are redirected back.
     } catch (error: any) {
+      if (error.code === 'auth/popup-closed-by-user') {
+        return;
+      }
       // This catch block handles synchronous errors during the redirect initiation.
       toast({
         variant: "destructive",
@@ -137,7 +142,7 @@ export default function LoginPage() {
 
   if (isUserLoading || (user && (isAdminRoleLoading || isProfileLoading))) {
       return (
-        <div className="relative flex min-h-screen flex-col items-center justify-center p-4">
+        <div className="relative flex min-h-screen flex-col items-center justify-center bg-background p-4">
             {bgImage && (
                 <Image
                 src={bgImage.imageUrl}
@@ -157,7 +162,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center p-4">
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-background p-4">
       {bgImage && (
         <Image
           src={bgImage.imageUrl}
@@ -203,15 +208,34 @@ export default function LoginPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
+                    <div className="relative">
+                      <FormControl>
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          className="pr-10"
+                          {...field}
+                        />
+                      </FormControl>
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground"
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-5 w-5" />
+                        ) : (
+                          <Eye className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Signing In..." : "Sign In with Email"}
+                {form.formState.isSubmitting ? "Logging In..." : "Log In with Email"}
               </Button>
             </form>
           </Form>
@@ -227,7 +251,7 @@ export default function LoginPage() {
           </div>
           <Button variant="secondary" className="w-full" onClick={handleGoogleSignIn}>
               <Icons.google className="mr-2 h-5 w-5" />
-              Sign in with Google
+              Log in with Google
           </Button>
         </CardContent>
         <CardFooter className="flex-col gap-4">
