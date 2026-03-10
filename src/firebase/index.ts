@@ -12,9 +12,11 @@ export function initializeFirebase(): { firebaseApp: FirebaseApp | null; auth: A
     return getSdks(app);
   }
 
+  const isConfigValid = firebaseConfig && firebaseConfig.apiKey && firebaseConfig.projectId;
+
   // Validate that the config object is populated and not with placeholders
-  if (!firebaseConfig.projectId || firebaseConfig.projectId.includes('REPLACE_WITH')) {
-    console.warn("Firebase config is not populated or contains placeholder values. The app will not connect to Firebase. Make sure your environment variables in a .env.local file are set correctly.");
+  if (!isConfigValid || firebaseConfig.projectId?.includes('REPLACE_WITH')) {
+    console.warn("Firebase config is not populated or contains placeholder values. The app will not connect to Firebase. Make sure your environment variables are set correctly.");
     return { firebaseApp: null, auth: null, firestore: null };
   }
 

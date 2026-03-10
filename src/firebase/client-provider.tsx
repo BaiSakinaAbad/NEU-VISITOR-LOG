@@ -23,15 +23,15 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
                     Your Firebase environment variables are missing or incorrect.
                 </p>
                 <p className="text-sm text-muted-foreground">
-                    Please create a{' '}
+                    For local development, create a{' '}
                     <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
                         .env.local
                     </code>{' '}
-                    file and add your Firebase project credentials. Refer to the{' '}
+                    file. For production on Vercel, set the Environment Variables in your project settings. Refer to the{' '}
                     <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
-                        .env.example
+                        README.md
                     </code>{' '}
-                    file for the required variables.
+                    file for required variables.
                 </p>
             </div>
         </div>
