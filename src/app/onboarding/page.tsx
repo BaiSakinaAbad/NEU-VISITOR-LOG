@@ -147,7 +147,7 @@ export default function OnboardingPage() {
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select your affiliation" />
-                        </Trigger>
+                        </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {affiliations.map((affiliation) => (
