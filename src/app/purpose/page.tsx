@@ -64,9 +64,19 @@ export default function PurposePage() {
   const { data: visitPurposes, isLoading: arePurposesLoading } = useCollection<VisitPurpose>(purposesRef);
 
   useEffect(() => {
-    // Redirect admins away from this page, as they do not log visits.
-    if (!isProfileLoading && userProfile?.role === 'admin') {
+    // Wait for profile to load
+    if (isProfileLoading) return;
+
+    // Redirect admins away from this page
+    if (userProfile?.role === 'admin') {
       router.push('/admin/dashboard');
+      return;
+    }
+
+    // If a regular user somehow lands here without an affiliation, send them to onboarding.
+    if (!userProfile?.affiliation || userProfile.affiliation === 'Unknown') {
+        router.push('/onboarding');
+        return;
     }
   }, [userProfile, isProfileLoading, router]);
 

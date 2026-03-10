@@ -60,31 +60,36 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    // Wait for all loading states to resolve before making a routing decision.
+    // This effect handles redirection after a user's auth state is determined.
+    
+    // While we wait for auth or profile data, do nothing.
     if (isUserLoading || (user && isProfileLoading)) {
-      return;
+      return; 
     }
 
-    // If no user is logged in, remain on the login page.
+    // If there is no authenticated user, stay on the login page.
     if (!user) {
       return;
     }
 
-    // User is authenticated, determine where to redirect.
-    // ADMINS: Always go to the admin dashboard.
+    // At this point, we have a user and their profile has been loaded (or we know it doesn't exist).
+    
+    // Case 1: The user is an administrator. Redirect to the admin dashboard.
     if (userProfile?.role === 'admin') {
       router.push('/admin/dashboard');
       return;
     }
-
-    // REGULAR USERS:
-    // If profile is incomplete, go to onboarding.
-    if (!userProfile || userProfile.affiliation === 'Unknown') {
+    
+    // Case 2: The user is a regular user but hasn't completed onboarding.
+    // This is true if there's no profile or affiliation is missing/default.
+    if (!userProfile || !userProfile.affiliation || userProfile.affiliation === 'Unknown') {
       router.push('/onboarding');
-    } else {
-    // Otherwise, they are a regular, onboarded user.
-      router.push('/purpose');
+      return;
     }
+
+    // Case 3: The user is a regular, fully onboarded user. Redirect to the purpose page.
+    router.push('/purpose');
+
   }, [user, isUserLoading, userProfile, isProfileLoading, router]);
 
 
