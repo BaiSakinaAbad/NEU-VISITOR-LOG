@@ -14,6 +14,30 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
     return initializeFirebase();
   }, []); // Empty dependency array ensures this runs only once on mount
 
+  if (!firebaseServices.firebaseApp || !firebaseServices.auth || !firebaseServices.firestore) {
+    return (
+        <div className="flex h-screen w-full flex-col items-center justify-center bg-background p-4 text-foreground">
+            <div className="w-full max-w-md rounded-lg border bg-card p-8 text-center shadow-lg">
+                <h1 className="mb-4 text-2xl font-bold text-destructive">Firebase Not Configured</h1>
+                <p className="mb-4 text-muted-foreground">
+                    Your Firebase environment variables are missing or incorrect.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                    Please create a{' '}
+                    <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
+                        .env.local
+                    </code>{' '}
+                    file and add your Firebase project credentials. Refer to the{' '}
+                    <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
+                        .env.example
+                    </code>{' '}
+                    file for the required variables.
+                </p>
+            </div>
+        </div>
+    );
+  }
+
   return (
     <FirebaseProvider
       firebaseApp={firebaseServices.firebaseApp}

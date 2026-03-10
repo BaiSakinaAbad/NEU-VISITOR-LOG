@@ -18,10 +18,30 @@ This is a web application for logging and managing visitors at the New Era Unive
 
 ## Getting Started
 
-To run the development server:
+To run the development server, you first need to set up your environment variables.
+
+### Environment Variables
+
+Copy the `.env.example` file to a new file named `.env.local`:
+
+```bash
+cp .env.example .env.local
+```
+
+Then, fill in the values in your `.env.local` file.
+
+### Running the Development Server
+
+Once your environment variables are set, you can run the development server:
 
 ```bash
 npm run dev
 ```
 
 Open [http://localhost:9002](http://localhost:9002) with your browser to see the result.
+
+## Deployment
+
+This application is configured for deployment on [Vercel](https://vercel.com/).
+
+When deploying to Vercel, make sure to add the same environment variables from your `.env.local` file to your Vercel project's **Settings** > **Environment Variables**.
