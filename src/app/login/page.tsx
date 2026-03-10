@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { GoogleAuthProvider, signInWithRedirect, signInWithEmailAndPassword } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -122,24 +122,39 @@ export default function LoginPage() {
     if (!auth) return;
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({
-        prompt: 'select_account'
+      prompt: "select_account",
     });
+
     try {
-      await signInWithRedirect(auth, provider);
-      // The user is redirected, so the rest of the app logic will be handled by the AuthWatcher 
-      // and the useEffect hook when they are redirected back.
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Immediately check the domain after successful popup sign-in.
+      if (!user.email?.endsWith("@neu.edu.ph")) {
+        toast({
+          variant: "destructive",
+          title: "Access Denied",
+          description: "Only users with a @neu.edu.ph email address are allowed.",
+        });
+        await signOut(auth);
+        return; // Stop further processing
+      }
+      // If the domain is valid, the AuthWatcher and the redirection useEffect will handle the rest.
     } catch (error: any) {
-      if (error.code === 'auth/popup-closed-by-user') {
+      // Handle specific errors, like the user closing the popup.
+      if (error.code === "auth/popup-closed-by-user") {
         return;
       }
-      // This catch block handles synchronous errors during the redirect initiation.
+      
+      // Generic error for other issues.
       toast({
         variant: "destructive",
         title: "Google Sign-In Failed",
-        description: "Could not start Google Sign-In. Please check your browser settings and try again.",
+        description: "An error occurred during sign-in. Please try again.",
       });
     }
   };
+
 
   if (isUserLoading || (user && isProfileLoading)) {
       return (
