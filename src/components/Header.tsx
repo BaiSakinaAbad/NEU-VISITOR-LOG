@@ -29,10 +29,7 @@ export function Header() {
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  const adminRoleRef = useMemoFirebase(() => user ? doc(firestore, 'roles_admin', user.uid) : null, [firestore, user]);
-  const { data: adminRole } = useDoc(adminRoleRef);
-  
-  const isAdmin = adminRole !== null;
+  const isAdmin = userProfile?.role === 'admin';
 
   const handleLogout = async () => {
     if (!auth) return;

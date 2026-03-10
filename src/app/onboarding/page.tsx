@@ -36,6 +36,7 @@ import { affiliations } from "@/lib/data";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { UserProfile } from "@/lib/schema";
 
 const formSchema = z.object({
   affiliation: z.string({
@@ -50,14 +51,14 @@ export default function OnboardingPage() {
   const { toast } = useToast();
   const bgImage = PlaceHolderImages.find((img) => img.id === "login-background");
   
-  const adminRoleRef = useMemoFirebase(() => user ? doc(firestore, 'roles_admin', user.uid) : null, [firestore, user]);
-  const { data: adminRole, isLoading: isAdminRoleLoading } = useDoc(adminRoleRef);
+  const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
-    if (!isAdminRoleLoading && adminRole) {
+    if (!isProfileLoading && userProfile?.role === 'admin') {
         router.push('/admin/dashboard');
     }
-  }, [adminRole, isAdminRoleLoading, router]);
+  }, [userProfile, isProfileLoading, router]);
 
 
   const form = useForm<z.infer<typeof formSchema>>({

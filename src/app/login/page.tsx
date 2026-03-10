@@ -48,9 +48,6 @@ export default function LoginPage() {
   const firestore = useFirestore();
   const [showPassword, setShowPassword] = useState(false);
 
-  const adminRoleRef = useMemoFirebase(() => user ? doc(firestore, 'roles_admin', user.uid) : null, [firestore, user]);
-  const { data: adminRole, isLoading: isAdminRoleLoading } = useDoc(adminRoleRef);
-  
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
   
@@ -64,7 +61,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     // Wait for all loading states to resolve before making a routing decision.
-    if (isUserLoading || (user && (isAdminRoleLoading || isProfileLoading))) {
+    if (isUserLoading || (user && isProfileLoading)) {
       return;
     }
 
@@ -74,7 +71,7 @@ export default function LoginPage() {
     }
 
     // User is authenticated; now determine where to redirect them.
-    if (adminRole) {
+    if (userProfile?.role === 'admin') {
       // 1. If they are an admin, redirect to the admin dashboard.
       router.push('/admin/dashboard');
     } else if (!userProfile || userProfile.affiliation === 'Unknown') {
@@ -84,7 +81,7 @@ export default function LoginPage() {
       // 3. Otherwise, they are a regular, onboarded user.
       router.push('/purpose');
     }
-  }, [user, isUserLoading, adminRole, isAdminRoleLoading, userProfile, isProfileLoading, router]);
+  }, [user, isUserLoading, userProfile, isProfileLoading, router]);
 
 
   const onEmailSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -140,7 +137,7 @@ export default function LoginPage() {
     }
   };
 
-  if (isUserLoading || (user && (isAdminRoleLoading || isProfileLoading))) {
+  if (isUserLoading || (user && isProfileLoading)) {
       return (
         <div className="relative flex min-h-screen flex-col items-center justify-center p-4">
             {bgImage && (

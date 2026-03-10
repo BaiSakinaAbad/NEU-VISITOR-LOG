@@ -5,6 +5,7 @@ export interface UserProfile {
     email: string;
     displayName: string;
     affiliation: string;
+    role: 'user' | 'admin';
     isBlocked: boolean;
     createdAt: string;
     updatedAt?: string;
