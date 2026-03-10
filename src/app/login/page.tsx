@@ -70,15 +70,19 @@ export default function LoginPage() {
       return;
     }
 
-    // User is authenticated; now determine where to redirect them.
+    // User is authenticated, determine where to redirect.
+    // ADMINS: Always go to the admin dashboard.
     if (userProfile?.role === 'admin') {
-      // 1. If they are an admin, redirect to the admin dashboard.
       router.push('/admin/dashboard');
-    } else if (!userProfile || userProfile.affiliation === 'Unknown') {
-      // 2. If their profile is missing or incomplete, send to onboarding.
+      return;
+    }
+
+    // REGULAR USERS:
+    // If profile is incomplete, go to onboarding.
+    if (!userProfile || userProfile.affiliation === 'Unknown') {
       router.push('/onboarding');
     } else {
-      // 3. Otherwise, they are a regular, onboarded user.
+    // Otherwise, they are a regular, onboarded user.
       router.push('/purpose');
     }
   }, [user, isUserLoading, userProfile, isProfileLoading, router]);

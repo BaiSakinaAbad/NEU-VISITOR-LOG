@@ -64,6 +64,13 @@ export default function PurposePage() {
   const { data: visitPurposes, isLoading: arePurposesLoading } = useCollection<VisitPurpose>(purposesRef);
 
   useEffect(() => {
+    // Redirect admins away from this page, as they do not log visits.
+    if (!isProfileLoading && userProfile?.role === 'admin') {
+      router.push('/admin/dashboard');
+    }
+  }, [userProfile, isProfileLoading, router]);
+
+  useEffect(() => {
     if (firestore && visitPurposes !== null && !arePurposesLoading && !isSeeding) {
         setIsSeeding(true); 
 
