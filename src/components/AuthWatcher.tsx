@@ -29,7 +29,7 @@ export function AuthWatcher() {
         return; // Stop further processing
       }
 
-      const userRef = doc(firestore, 'user_profiles', firebaseUser.uid);
+      const userRef = doc(firestore, 'users', firebaseUser.uid);
       try {
         const userDoc = await getDoc(userRef);
 

@@ -74,7 +74,7 @@ export default function OnboardingPage() {
       return;
     }
 
-    const userRef = doc(firestore, 'user_profiles', user.uid);
+    const userRef = doc(firestore, 'users', user.uid);
     updateDocumentNonBlocking(userRef, {
       affiliation: data.affiliation,
       updatedAt: new Date().toISOString(),

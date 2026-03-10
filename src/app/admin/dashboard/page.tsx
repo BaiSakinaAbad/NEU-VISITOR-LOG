@@ -20,7 +20,7 @@ import { format, isToday } from "date-fns";
 export default function AdminDashboardPage() {
   const firestore = useFirestore();
 
-  const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'user_profiles')) : null, [firestore]);
+  const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users')) : null, [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
 
   const visitsQuery = useMemoFirebase(() => firestore ? query(collectionGroup(firestore, 'visits')) : null, [firestore]);

@@ -45,14 +45,14 @@ import { collection, doc, query } from "firebase/firestore";
 
 export default function UsersPage() {
   const firestore = useFirestore();
-  const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'user_profiles')) : null, [firestore]);
+  const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users')) : null, [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
 
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleBlockUser = (userId: string, currentStatus: boolean) => {
     if (!firestore) return;
-    const userRef = doc(firestore, 'user_profiles', userId);
+    const userRef = doc(firestore, 'users', userId);
     updateDocumentNonBlocking(userRef, { isBlocked: !currentStatus });
   };
 

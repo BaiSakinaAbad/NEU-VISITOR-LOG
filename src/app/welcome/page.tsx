@@ -30,7 +30,7 @@ function WelcomeMessage() {
 
   const visitRef = useMemoFirebase(() => {
     if (!user || !firestore || !visitId) return null;
-    return doc(firestore, 'user_profiles', user.uid, 'visits', visitId);
+    return doc(firestore, 'users', user.uid, 'visits', visitId);
   }, [user, firestore, visitId]);
 
   const { data: visit, isLoading } = useDoc<Visit>(visitRef);

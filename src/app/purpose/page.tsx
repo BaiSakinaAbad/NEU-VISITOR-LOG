@@ -57,7 +57,7 @@ export default function PurposePage() {
   const [isSeeding, setIsSeeding] = useState(false);
   const bgImage = PlaceHolderImages.find((img) => img.id === "login-background");
 
-  const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'user_profiles', user.uid) : null, [firestore, user]);
+  const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   const purposesRef = useMemoFirebase(() => firestore ? collection(firestore, 'visit_purposes') : null, [firestore]);
@@ -98,7 +98,7 @@ export default function PurposePage() {
     // });
     const welcomeMessage = `Welcome to NEU Library, ${userProfile.displayName}! We're glad to have you.`;
     
-    const newVisitRef = doc(collection(firestore, 'user_profiles', user.uid, 'visits'));
+    const newVisitRef = doc(collection(firestore, 'users', user.uid, 'visits'));
     const newVisit = {
       id: newVisitRef.id,
       userId: user.uid,

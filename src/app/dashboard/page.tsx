@@ -26,10 +26,10 @@ export default function DashboardPage() {
   const { user } = useUser();
   const firestore = useFirestore();
 
-  const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'user_profiles', user.uid) : null, [firestore, user]);
+  const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  const visitsRef = useMemoFirebase(() => user ? query(collection(firestore, 'user_profiles', user.uid, 'visits'), orderBy('visitDateTime', 'desc')) : null, [firestore, user]);
+  const visitsRef = useMemoFirebase(() => user ? query(collection(firestore, 'users', user.uid, 'visits'), orderBy('visitDateTime', 'desc')) : null, [firestore, user]);
   const { data: userVisits, isLoading: areVisitsLoading } = useCollection<Visit>(visitsRef);
   
   const visitsThisMonth = userVisits?.filter(v => getMonth(new Date(v.visitDateTime)) === getMonth(new Date())).length ?? 0;
