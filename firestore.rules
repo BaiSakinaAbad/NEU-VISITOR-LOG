@@ -82,6 +82,21 @@ service cloud.firestore {
     }
 
     // --------------------------------------------------------------------
+    // Collection Group Rules
+    // --------------------------------------------------------------------
+
+    /**
+     * @description Enables admin-only collection group queries on 'visits'.
+     * @path /{path=**}/visits/{visitId}
+     * @allow (get, list) An admin reading any visit for analytics or management.
+     * @principle Grants broad read access to a specific collection group for a privileged role.
+     */
+    match /{path=**}/visits/{visitId} {
+      allow get, list: if isAdmin();
+    }
+    
+
+    // --------------------------------------------------------------------
     // User Profiles
     // --------------------------------------------------------------------
 
