@@ -5,22 +5,18 @@
  * unless explicitly granted.
  *
  * Data Structure:
- * - /users/{userId}: Contains user profile data. Each user can manage their own profile.
+ * - /users/{userId}: Contains user profile data. Each user can manage their own profile. The 'role' field in this document determines admin status.
  * - /users/{userId}/visits/{visitId}: A subcollection logging each visit a user makes. It is owned by the parent user.
  * - /visit_purposes/{purposeId}: A globally readable collection of predefined reasons for a library visit. Writable only by admins.
- * - /roles_admin/{adminId}: A private lookup collection where the existence of a document signifies admin privileges for that user's UID.
- * - /statistics/daily_visitor_count: A public, read-only singleton document for displaying app-wide stats.
  *
  * Key Security Decisions:
- * - Admin Role Management: Administrator status is determined by checking for the existence of a user's UID as a
- *   document ID in the `/roles_admin` collection. This is a highly efficient and secure pattern (`exists()`).
+ * - Admin Role Management: Administrator status is determined by reading the 'role' field from the requesting user's
+ *   own profile document (`/users/{uid}`). This is secure because users only have read access to their own document.
  * - User Data Scoping: All user-specific data is nested under `/users/{userId}`, allowing rules to use the `{userId}`
  *   wildcard to enforce strict data ownership without needing extra database reads.
  * - No User Listing: Non-admin users are explicitly forbidden from listing the `/users` collection to protect user privacy.
- * - Public Data Segregation: Publicly readable data (like visit purposes and statistics) is stored in separate top-level
- *   collections, which is more secure and performant for list operations than mixing public and private data.
- * - Backend-Only Writes: Collections intended to be written only by backend services (like `/statistics`) have all
- *   client-side write operations disabled.
+ * - Public Data Segregation: Publicly readable data (like visit purposes) is stored in a separate top-level
+ *   collection, which is more secure and performant for list operations than mixing public and private data.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -39,10 +35,10 @@ service cloud.firestore {
 
     /**
      * Checks if the authenticated user has admin privileges.
-     * Admin status is granted if a document with the user's UID exists in the /roles_admin collection.
+     * Admin status is granted if the 'role' field in their user document is 'admin'.
      */
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     /**
@@ -153,42 +149,6 @@ service cloud.firestore {
       allow create: if isAdmin();
       allow update, delete: if isAdmin() && resource != null;
     }
-
-    // --------------------------------------------------------------------
-    // Admin Roles (Authorization Lookup)
-    // --------------------------------------------------------------------
-
-    /**
-     * @description Manages the collection of administrator UIDs. This collection should not be readable by clients.
-     * @path /roles_admin/{adminId}
-     * @allow (create) An existing admin adding a new admin to the system.
-     * @deny (get, list) Any user, including admins, from reading or listing the admin roles to prevent enumeration.
-     * @principle Secures authorization-critical data by making it write-only for admins and unreadable by clients.
-     */
-    match /roles_admin/{adminId} {
-      allow get: if false;
-      allow list: if false;
-      allow create: if isAdmin();
-      allow update, delete: if isAdmin() && resource != null;
-    }
-
-    // --------------------------------------------------------------------
-    // Statistics (Singleton Document)
-    // --------------------------------------------------------------------
-
-    /**
-     * @description Controls access to the singleton document for daily visitor statistics.
-     * @path /statistics/daily_visitor_count
-     * @allow (get) Any user, including anonymous ones, reading the visitor count for a dashboard.
-     * @deny (create, update, delete) Any client-side attempt to modify statistics, which should only be done by a trusted backend.
-     * @principle Secures aggregated data by making it publicly readable but immune to client-side writes.
-     */
-    match /statistics/daily_visitor_count {
-      allow get: if true;
-      allow list: if false; // This is a document, not a collection.
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
-    }
   }
 }
+    
