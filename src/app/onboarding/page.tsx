@@ -55,8 +55,12 @@ export default function OnboardingPage() {
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
-    if (!isProfileLoading && userProfile?.role === 'admin') {
-        router.push('/admin/dashboard');
+    if (!isProfileLoading && userProfile) {
+        if(userProfile.role === 'admin') {
+            router.push('/admin/dashboard');
+        } else if (userProfile.affiliation && userProfile.affiliation !== 'Unknown') {
+            router.push('/purpose');
+        }
     }
   }, [userProfile, isProfileLoading, router]);
 
@@ -86,6 +90,26 @@ export default function OnboardingPage() {
       description: `Your affiliation is set to ${data.affiliation}.`,
     });
     router.push("/purpose");
+  }
+
+  if (isProfileLoading || !userProfile || userProfile.role === 'admin' || (userProfile.affiliation && userProfile.affiliation !== 'Unknown')) {
+    return (
+      <div className="relative flex min-h-screen flex-col items-center justify-center p-4">
+        {bgImage && (
+          <Image
+            src={bgImage.imageUrl}
+            alt={bgImage.description}
+            fill
+            className="absolute inset-0 -z-10 object-cover"
+            data-ai-hint={bgImage.imageHint}
+          />
+        )}
+        <div className="absolute inset-0 -z-10 bg-white/70" />
+        <div className="flex items-center gap-2">
+            <Icons.logo className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -123,7 +147,7 @@ export default function OnboardingPage() {
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select your affiliation" />
-                        </SelectTrigger>
+                        </Trigger>
                       </FormControl>
                       <SelectContent>
                         {affiliations.map((affiliation) => (

@@ -60,10 +60,10 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    if (user && !isProfileLoading) {
-        if (userProfile?.role === 'admin') {
+    if (user && !isProfileLoading && userProfile) {
+        if (userProfile.role === 'admin') {
             router.push('/admin/dashboard');
-        } else if (userProfile?.affiliation && userProfile.affiliation !== 'Unknown') {
+        } else if (userProfile.affiliation && userProfile.affiliation !== 'Unknown') {
             router.push('/purpose');
         } else {
             router.push('/onboarding');

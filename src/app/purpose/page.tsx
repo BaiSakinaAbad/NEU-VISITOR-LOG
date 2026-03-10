@@ -64,8 +64,12 @@ export default function PurposePage() {
   const { data: visitPurposes, isLoading: arePurposesLoading } = useCollection<VisitPurpose>(purposesRef);
 
   useEffect(() => {
-    if (!isProfileLoading && userProfile?.role === 'admin') {
-      router.push('/admin/dashboard');
+    if (!isProfileLoading && userProfile) {
+        if (userProfile.role === 'admin') {
+            router.push('/admin/dashboard');
+        } else if (!userProfile.affiliation || userProfile.affiliation === 'Unknown') {
+            router.push('/onboarding');
+        }
     }
   }, [userProfile, isProfileLoading, router]);
 
@@ -123,7 +127,7 @@ export default function PurposePage() {
     router.push(`/welcome?visitId=${newVisit.id}`);
   }
 
-  if (isProfileLoading || arePurposesLoading || !visitPurposes) {
+  if (isProfileLoading || arePurposesLoading || !visitPurposes || !userProfile || userProfile.role === 'admin') {
     return (
         <div className="flex min-h-screen items-center justify-center">
             <Icons.logo className="h-8 w-8 animate-spin text-primary" />
