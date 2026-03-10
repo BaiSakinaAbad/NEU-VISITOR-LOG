@@ -1,47 +1,39 @@
-# NEU Library Visitor Log
+# 📚 NEU Library Visitor Log
 
-This is a web application for logging and managing visitors at the New Era University (NEU) Library.
+### **Midterm Project | Software Development 2**
 
-## Features
+A web and mobile-responsive application built for **New Era University (NEU)** to digitalize library entry logs. This project replaces manual logbooks with a secure, automated system that tracks library usage patterns and manages visitor access efficiently.
 
--   **User Authentication:** Secure login for students and administrators using their NEU email accounts.
--   **Visitor Logging:** Users can log their library visits and specify their purpose.
--   **Dashboard:** Users can view their visit history.
--   **Admin Panel:** Administrators can manage users and view library analytics.
+Initial deploy:
+[NEU LIBRARY VISITOR LOG](https://neu-visitor-log.vercel.app/login)
 
-## Tech Stack
+---
 
--   **Framework:** [Next.js](https://nextjs.org/)
--   **UI:** [React](https://react.dev/), [Tailwind CSS](https://tailwindcss.com/), [shadcn/ui](https://ui.shadcn.com/)
--   **Backend:** [Firebase](https://firebase.google.com/) (Authentication, Firestore)
--   **Generative AI:** [Genkit](https://firebase.google.com/docs/genkit)
+## 🎯 Goal
 
-## Getting Started
+To digitalized the library check-in process for students while providing administrators with real-time analytics.
 
-To run the development server, you first need to set up your environment variables.
+## 📋 Features
 
-### Environment Variables
+* **Institutional Login:** Secure authentication via NEU Google-based email.
+* **Profiling:** Captures College/Office details for first-time visitors and stores them for future entries.
+* **Reason Tracking:** Quick-select interface for visit purposes (Research, Computer Use, Studying, etc.).
+* **Admin:** Dashboard for daily/monthly statistics, user search, and a blocking system for access control.
 
-Copy the `.env.example` file to a new file named `.env.local`:
 
-```bash
-cp .env.example .env.local
-```
+## 🛠️ Tech Stack
 
-Then, fill in the values in your `.env.local` file.
+* **Framework:** [Next.js](https://nextjs.org/) (App Router)
+* **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+* **Backend & Auth:** [Firebase](https://firebase.google.com/) (Firestore & Auth)
+* **Deployment:** [Vercel](https://vercel.com/)
 
-### Running the Development Server
+## 👤 Creator
 
-Once your environment variables are set, you can run the development server:
+**Bai Sakina Abad** *New Era University* *Course: Software Development 2*
 
-```bash
-npm run dev
-```
+## 📄 License
 
-Open [http://localhost:9002](http://localhost:9002) with your browser to see the result.
+This project is licensed under the **MIT License**.
 
-## Deployment
-
-This application is configured for deployment on [Vercel](https://vercel.com/).
-
-When deploying to Vercel, make sure to add the same environment variables from your `.env.local` file to your Vercel project's **Settings** > **Environment Variables**.
+---
