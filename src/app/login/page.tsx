@@ -60,37 +60,16 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    // This effect handles redirection after a user's auth state is determined.
-    
-    // While we wait for auth or profile data, do nothing.
-    if (isUserLoading || (user && isProfileLoading)) {
-      return; 
+    if (user && !isProfileLoading) {
+        if (userProfile?.role === 'admin') {
+            router.push('/admin/dashboard');
+        } else if (userProfile?.affiliation && userProfile.affiliation !== 'Unknown') {
+            router.push('/purpose');
+        } else {
+            router.push('/onboarding');
+        }
     }
-
-    // If there is no authenticated user, stay on the login page.
-    if (!user) {
-      return;
-    }
-
-    // At this point, we have a user and their profile has been loaded (or we know it doesn't exist).
-    
-    // Case 1: The user is an administrator. Redirect to the admin dashboard.
-    if (userProfile?.role === 'admin') {
-      router.push('/admin/dashboard');
-      return;
-    }
-    
-    // Case 2: The user is a regular user but hasn't completed onboarding.
-    // This is true if there's no profile or affiliation is missing/default.
-    if (!userProfile || !userProfile.affiliation || userProfile.affiliation === 'Unknown') {
-      router.push('/onboarding');
-      return;
-    }
-
-    // Case 3: The user is a regular, fully onboarded user. Redirect to the purpose page.
-    router.push('/purpose');
-
-  }, [user, isUserLoading, userProfile, isProfileLoading, router]);
+  }, [user, isProfileLoading, userProfile, router]);
 
 
   const onEmailSubmit = async (values: z.infer<typeof formSchema>) => {
