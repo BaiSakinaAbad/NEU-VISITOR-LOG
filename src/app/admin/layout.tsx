@@ -25,7 +25,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <Link
         href="/admin/users"
         className={cn(
-          "text-muted-foreground transition-colors hover:text-foreground",
+          "text-muted-foreground transition-colors hover:text-foreground whitespace-nowrap",
           pathname.startsWith('/admin/users') && "text-foreground font-semibold"
         )}
       >
@@ -76,7 +76,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </Sheet>
         </div>
         
-        <div className="flex w-full items-center justify-end">
+        <div className="flex flex-1 items-center justify-end">
           <Header />
         </div>
       </header>
