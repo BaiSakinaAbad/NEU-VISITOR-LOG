@@ -4,8 +4,8 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
-import { doc } from 'firebase/firestore';
+import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup, signOut, type User as FirebaseUser } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -69,47 +69,81 @@ export default function LoginPage() {
     },
   });
 
+  // This effect handles redirecting users who are already signed in when they visit the login page.
   useEffect(() => {
     if (isUserLoading || (user && isProfileLoading)) {
-        return; // Wait until loading is complete
+        return; // Wait until auth state and profile are fully loaded
     }
 
     if (user && userProfile) {
-        // 1. Check if user is blocked
+        // A user is already logged in, so we redirect them.
+        // The isBlocked check here is a safeguard. The main check is in handleSuccessfulLogin.
         if (userProfile.isBlocked) {
             setIsBlockedDialogOpen(true);
-            signOut(auth);
+            signOut(auth); // Sign them out just in case
             return;
         }
 
-        // 2. Check for admin role
         if (userProfile.role === 'admin') {
             router.push('/admin/dashboard');
             return;
         }
 
-        // 3. Check if user needs onboarding
         if (!userProfile.affiliation || userProfile.affiliation === 'Unknown') {
             router.push('/onboarding');
             return;
         }
 
-        // 4. Default for onboarded user: go to purpose selection
         router.push('/purpose');
-
-    } else if (user && !userProfile) {
-        // User authenticated but no profile doc exists yet. AuthWatcher is creating it.
-        // Send them to onboarding to wait.
-        router.push('/onboarding');
     }
-    // If !user, do nothing and stay on login page.
 }, [user, isUserLoading, userProfile, isProfileLoading, router, auth]);
+
+
+  const handleSuccessfulLogin = async (loggedInUser: FirebaseUser) => {
+    if (!firestore || !auth) return;
+
+    const userRef = doc(firestore, 'users', loggedInUser.uid);
+    try {
+        const userDoc = await getDoc(userRef);
+
+        if (userDoc.exists()) {
+            const profile = userDoc.data() as UserProfile;
+
+            // Core fix: Explicitly check isBlocked status immediately after login.
+            if (profile.isBlocked) {
+                setIsBlockedDialogOpen(true);
+                await signOut(auth);
+                return; // Stop further actions
+            }
+
+            // Redirect based on role and profile completeness
+            if (profile.role === 'admin') {
+                router.push('/admin/dashboard');
+            } else if (!profile.affiliation || profile.affiliation === 'Unknown') {
+                router.push('/onboarding');
+            } else {
+                router.push('/purpose');
+            }
+        } else {
+            // Profile doesn't exist yet, AuthWatcher will create it.
+            // Send to onboarding to wait for profile creation and then complete it.
+            router.push('/onboarding');
+        }
+    } catch (error) {
+        console.error("Error fetching user profile post-login:", error);
+        toast({
+            variant: "destructive",
+            title: "Login Error",
+            description: "Could not retrieve user profile. Please try again.",
+        });
+        await signOut(auth);
+    }
+  };
 
 
   const onEmailSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!auth) return;
 
-    // First, validate the email domain on the client side.
     if (!values.email.endsWith('@neu.edu.ph')) {
       toast({
         variant: "destructive",
@@ -120,11 +154,10 @@ export default function LoginPage() {
     }
 
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
-      // The useEffect hook will handle redirection on successful sign-in.
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      await handleSuccessfulLogin(userCredential.user);
     } catch (error: any) {
       let description = "An unexpected error occurred during sign-in. Please try again later.";
-      // Provide more specific feedback for invalid credentials.
       if (error.code === 'auth/invalid-credential') {
         description = "Invalid email or password. Please check your credentials and try again.";
       }
@@ -139,32 +172,26 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     if (!auth) return;
     const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({
-      prompt: "select_account",
-    });
+    provider.setCustomParameters({ prompt: "select_account" });
 
     try {
       const result = await signInWithPopup(auth, provider);
-      const user = result.user;
+      const loggedInUser = result.user;
 
-      // Immediately check the domain after successful popup sign-in.
-      if (!user.email?.endsWith("@neu.edu.ph")) {
+      if (!loggedInUser.email?.endsWith("@neu.edu.ph")) {
         toast({
           variant: "destructive",
           title: "Access Denied",
           description: "Only users with a @neu.edu.ph email address are allowed.",
         });
         await signOut(auth);
-        return; // Stop further processing
-      }
-      // If the domain is valid, the AuthWatcher and the redirection useEffect will handle the rest.
-    } catch (error: any) {
-      // Handle specific errors, like the user closing the popup.
-      if (error.code === "auth/popup-closed-by-user") {
         return;
       }
       
-      // Generic error for other issues.
+      await handleSuccessfulLogin(loggedInUser);
+
+    } catch (error: any) {
+      if (error.code === "auth/popup-closed-by-user") return;
       toast({
         variant: "destructive",
         title: "Google Sign-In Failed",
