@@ -40,20 +40,37 @@ import {
   
 import { MoreHorizontal, Search, UserX } from "lucide-react";
 import type { UserProfile } from "@/lib/schema";
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
-import { collection, doc, query } from "firebase/firestore";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, doc, query, updateDoc } from "firebase/firestore";
+import { useToast } from "@/hooks/use-toast";
 
 export default function UsersPage() {
   const firestore = useFirestore();
+  const { toast } = useToast();
   const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users')) : null, [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
 
   const [searchQuery, setSearchQuery] = useState("");
 
-  const handleBlockUser = (userId: string, currentStatus: boolean) => {
+  const handleBlockUser = async (userId: string, currentStatus: boolean) => {
     if (!firestore) return;
     const userRef = doc(firestore, 'users', userId);
-    updateDocumentNonBlocking(userRef, { isBlocked: !currentStatus });
+    const newStatus = !currentStatus;
+
+    try {
+        await updateDoc(userRef, { isBlocked: newStatus });
+        toast({
+            title: "Success",
+            description: `User has been ${newStatus ? 'blocked' : 'unblocked'}.`,
+        });
+    } catch (error) {
+        console.error("Failed to update user status:", error);
+        toast({
+            variant: "destructive",
+            title: "Update Failed",
+            description: "Could not update user status. Please check permissions and try again.",
+        });
+    }
   };
 
   const filteredUsers = users?.filter(user => 

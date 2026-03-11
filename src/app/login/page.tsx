@@ -33,6 +33,15 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import type { UserProfile } from "@/lib/schema";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
@@ -47,6 +56,7 @@ export default function LoginPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const [showPassword, setShowPassword] = useState(false);
+  const [isBlockedDialogOpen, setIsBlockedDialogOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
@@ -60,16 +70,40 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    if (user && !isProfileLoading && userProfile) {
+    if (isUserLoading || (user && isProfileLoading)) {
+        return; // Wait until loading is complete
+    }
+
+    if (user && userProfile) {
+        // 1. Check if user is blocked
+        if (userProfile.isBlocked) {
+            setIsBlockedDialogOpen(true);
+            signOut(auth);
+            return;
+        }
+
+        // 2. Check for admin role
         if (userProfile.role === 'admin') {
             router.push('/admin/dashboard');
-        } else if (userProfile.affiliation && userProfile.affiliation !== 'Unknown') {
-            router.push('/purpose');
-        } else {
-            router.push('/onboarding');
+            return;
         }
+
+        // 3. Check if user needs onboarding
+        if (!userProfile.affiliation || userProfile.affiliation === 'Unknown') {
+            router.push('/onboarding');
+            return;
+        }
+
+        // 4. Default for onboarded user: go to purpose selection
+        router.push('/purpose');
+
+    } else if (user && !userProfile) {
+        // User authenticated but no profile doc exists yet. AuthWatcher is creating it.
+        // Send them to onboarding to wait.
+        router.push('/onboarding');
     }
-  }, [user, isProfileLoading, userProfile, router]);
+    // If !user, do nothing and stay on login page.
+}, [user, isUserLoading, userProfile, isProfileLoading, router, auth]);
 
 
   const onEmailSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -260,6 +294,20 @@ export default function LoginPage() {
             </p>
         </CardFooter>
       </Card>
+      
+      <AlertDialog open={isBlockedDialogOpen} onOpenChange={setIsBlockedDialogOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Access Denied</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Your account has been blocked. Please contact the library office.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogAction onClick={() => setIsBlockedDialogOpen(false)}>OK</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
