@@ -7,7 +7,7 @@ export const affiliations = [
   "College of Arts and Sciences",
   "College of Business Administration",
   "College of Communication",
-  "College of Computer Studies",
+  "College of Informatics and Computing Studies",
   "College of Criminology",
   "College of Education",
   "College of Engineering and Technology",
