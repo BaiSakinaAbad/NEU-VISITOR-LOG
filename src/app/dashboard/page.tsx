@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CalendarDays, LogIn } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import { format, getMonth } from 'date-fns';
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import { doc, collection, query, orderBy, limit } from "firebase/firestore";
@@ -66,7 +66,6 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-medium">
               Total Visits
             </CardTitle>
-            <LogIn className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{areVisitsLoading ? <Skeleton className="h-8 w-10"/> : userVisits?.length ?? 0}</div>

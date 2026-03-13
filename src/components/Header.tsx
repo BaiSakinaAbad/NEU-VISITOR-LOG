@@ -41,7 +41,6 @@ export function Header() {
   const userEmail = userProfile?.email ?? "";
   const userAvatar = user?.photoURL;
   const userFallback = (userProfile?.displayName?.split(' ').map(n => n[0]).join('')) ?? "U";
-  const profileLink = isAdmin ? '/admin/dashboard' : '/dashboard';
 
   const title = pathname.startsWith('/admin') ? "NEU Admin" : "NEU Library";
   const titleLink = pathname.startsWith('/admin') ? "/admin/dashboard" : "/dashboard";
@@ -74,11 +73,6 @@ export function Header() {
                 </p>
             </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => router.push(profileLink)}>
-            <User className="mr-2 h-4 w-4" />
-            <span>Profile</span>
-            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
