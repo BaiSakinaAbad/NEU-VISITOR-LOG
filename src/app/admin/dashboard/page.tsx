@@ -15,7 +15,7 @@ import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, collectionGroup, query, where } from "firebase/firestore";
 import { UserProfile } from "@/lib/schema";
 import { Visit } from "@/lib/schema";
-import { format, isToday } from "date-fns";
+import { format, isToday, subDays } from "date-fns";
 
 export default function AdminDashboardPage() {
   const firestore = useFirestore();
@@ -23,8 +23,17 @@ export default function AdminDashboardPage() {
   const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users')) : null, [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
 
-  const visitsQuery = useMemoFirebase(() => firestore ? query(collectionGroup(firestore, 'visits')) : null, [firestore]);
+  // Fetch visits from the last 30 days only to improve performance
+  const visitsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    const thirtyDaysAgo = subDays(new Date(), 30);
+    return query(
+      collectionGroup(firestore, 'visits'),
+      where('visitDateTime', '>=', thirtyDaysAgo.toISOString())
+    );
+  }, [firestore]);
   const { data: visits, isLoading: visitsLoading } = useCollection<Visit>(visitsQuery);
+
 
   const todaysVisitors = useMemo(() => {
     if (!visits) return 0;
@@ -32,6 +41,7 @@ export default function AdminDashboardPage() {
   }, [visits]);
 
   const collegeVisitCounts = useMemo(() => {
+    // This calculation is now based on the last 30 days of visits
     if (!users || !visits) return [];
     const userAffiliationMap = new Map(users.map(u => [u.id, u.affiliation]));
     const counts = visits.reduce((acc, visit) => {
@@ -51,6 +61,7 @@ export default function AdminDashboardPage() {
   }, [users, visits]);
 
   const visitPurposeCounts = useMemo(() => {
+    // This calculation is now based on the last 30 days of visits
     if (!visits) return [];
     const counts = visits.flatMap(visit => visit.purposeIds).reduce((acc, purpose) => {
         acc[purpose] = (acc[purpose] || 0) + 1;
@@ -63,21 +74,28 @@ export default function AdminDashboardPage() {
   }, [visits]);
 
   const dailyStats = useMemo(() => {
+    // This calculation is now based on the last 30 days of visits
     if (!visits) return [];
     const stats = visits.reduce((acc, visit) => {
-      const date = format(new Date(visit.visitDateTime), 'MMM d');
-      acc[date] = (acc[date] || 0) + 1;
+      const dateKey = format(new Date(visit.visitDateTime), 'yyyy-MM-dd');
+      acc[dateKey] = (acc[dateKey] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    return Object.entries(stats).map(([date, visitors]) => ({ date, visitors })).slice(-30);
+    return Object.entries(stats)
+        .map(([dateKey, visitors]) => ({
+            date: format(new Date(dateKey), 'MMM d'),
+            fullDate: dateKey,
+            visitors,
+        }))
+        .sort((a, b) => a.fullDate.localeCompare(b.fullDate));
   }, [visits]);
 
   return (
     <>
       <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight font-headline">Welcome, Jeremias!</h1>
-        <p className="text-muted-foreground">Real-time library analytics.</p>
+        <p className="text-muted-foreground">Real-time library analytics for the last 30 days.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
@@ -142,7 +160,7 @@ export default function AdminDashboardPage() {
                         <CardTitle>Visits by College</CardTitle>
                         <Building className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <CardDescription>Distribution of visitors across different colleges.</CardDescription>
+                    <CardDescription>Distribution of visitors across different colleges (last 30 days).</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                     {collegeVisitCounts.map(({ affiliation, count }) => (
@@ -160,7 +178,7 @@ export default function AdminDashboardPage() {
                         <CardTitle>Top Visit Purposes</CardTitle>
                         <BookOpen className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <CardDescription>Most common reasons for visiting the library.</CardDescription>
+                    <CardDescription>Most common reasons for visiting the library (last 30 days).</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                     {visitPurposeCounts.map(({ purpose, count }) => (
