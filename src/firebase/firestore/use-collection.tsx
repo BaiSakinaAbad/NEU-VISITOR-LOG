@@ -88,22 +88,27 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (error: FirestoreError) => {
-        let path: string;
-        const ref = memoizedTargetRefOrQuery;
-
-        if (ref.type === 'collection') {
-            path = ref.path;
-        } else if (ref.type === 'query') {
-            const internalQuery = ref as unknown as InternalQuery;
-            if (internalQuery._query?.isCollectionGroupQuery && internalQuery._query?.collectionGroup) {
-                path = `(collection group: '${internalQuery._query.collectionGroup}')`;
-            } else if (internalQuery._query?.path) {
-                path = internalQuery._query.path.canonicalString();
-            } else {
-                path = '(unknown query path)';
+        let path = '(unknown query path)'; // Default in case inspection fails
+        try {
+            const ref = memoizedTargetRefOrQuery as any; // Use 'any' for flexible inspection
+            if (ref) {
+                if (ref.type === 'collection') {
+                    path = ref.path;
+                } else if (ref.type === 'query') {
+                    const internalQuery = ref._query;
+                    if (internalQuery) {
+                        if (internalQuery.isCollectionGroupQuery && internalQuery.collectionGroup) {
+                            path = `(collection group: '${internalQuery.collectionGroup}')`;
+                        } else if (internalQuery.path) {
+                            path = internalQuery.path.canonicalString ? internalQuery.path.canonicalString() : internalQuery.path.toString();
+                        }
+                    }
+                }
             }
-        } else {
-            path = '(unknown ref type)';
+        } catch (e) {
+            // If any inspection fails, we can't do much, but let's acknowledge it.
+            path = '(error inspecting query path)';
+            console.error("useCollection: Failed to inspect Firestore query object.", e);
         }
 
         const contextualError = new FirestorePermissionError({
