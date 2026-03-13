@@ -89,14 +89,21 @@ export function useCollection<T = any>(
       },
       (error: FirestoreError) => {
         let path: string;
-        const internalQuery = memoizedTargetRefOrQuery as unknown as InternalQuery;
+        const ref = memoizedTargetRefOrQuery;
 
-        if (memoizedTargetRefOrQuery.type === 'collection') {
-            path = (memoizedTargetRefOrQuery as CollectionReference).path;
-        } else if (internalQuery._query?.isCollectionGroupQuery && internalQuery._query?.collectionGroup) {
-            path = `(collection group: '${internalQuery._query.collectionGroup}')`;
+        if (ref.type === 'collection') {
+            path = ref.path;
+        } else if (ref.type === 'query') {
+            const internalQuery = ref as unknown as InternalQuery;
+            if (internalQuery._query?.isCollectionGroupQuery && internalQuery._query?.collectionGroup) {
+                path = `(collection group: '${internalQuery._query.collectionGroup}')`;
+            } else if (internalQuery._query?.path) {
+                path = internalQuery._query.path.canonicalString();
+            } else {
+                path = '(unknown query path)';
+            }
         } else {
-            path = internalQuery._query?.path.canonicalString() || '(unknown query path)';
+            path = '(unknown ref type)';
         }
 
         const contextualError = new FirestorePermissionError({
