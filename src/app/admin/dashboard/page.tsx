@@ -35,8 +35,11 @@ export default function AdminDashboardPage() {
     if (!users || !visits) return [];
     const userAffiliationMap = new Map(users.map(u => [u.id, u.affiliation]));
     const counts = visits.reduce((acc, visit) => {
-        const affiliation = userAffiliationMap.get(visit.userId);
+        let affiliation = userAffiliationMap.get(visit.userId);
         if (affiliation && affiliation !== 'Unknown') {
+            if (affiliation === 'College of Computer Studies') {
+                affiliation = 'College of Informatics and Computing Studies';
+            }
             acc[affiliation] = (acc[affiliation] || 0) + 1;
         }
         return acc;
