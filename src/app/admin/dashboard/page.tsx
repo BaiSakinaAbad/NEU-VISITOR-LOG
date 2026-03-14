@@ -38,6 +38,45 @@ export default function AdminDashboardPage() {
     return visits.filter(v => isToday(new Date(v.visitDateTime))).length;
   }, [visits]);
 
+  const peakHourToday = useMemo(() => {
+    if (!visits) return { hour: 'N/A', count: 0 };
+
+    const todayVisits = visits.filter(v => isToday(new Date(v.visitDateTime)));
+
+    if (todayVisits.length === 0) {
+        return { hour: 'N/A', count: 0 };
+    }
+
+    const hourCounts = todayVisits.reduce((acc, visit) => {
+        const hour = new Date(visit.visitDateTime).getHours(); // 0-23
+        acc[hour] = (acc[hour] || 0) + 1;
+        return acc;
+    }, {} as Record<number, number>);
+
+    let peakHour = -1;
+    let maxVisits = 0;
+    for (const hour in hourCounts) {
+        if (hourCounts[hour] > maxVisits) {
+            maxVisits = hourCounts[hour];
+            peakHour = parseInt(hour, 10);
+        }
+    }
+    
+    if (peakHour === -1) {
+        return { hour: 'N/A', count: 0 };
+    }
+
+    // Formatting the hour
+    const ampm = peakHour >= 12 ? 'PM' : 'AM';
+    let displayHour = peakHour % 12;
+    if (displayHour === 0) displayHour = 12; // 12 PM or 12 AM
+
+    return {
+        hour: `${displayHour}:00 ${ampm}`,
+        count: maxVisits
+    };
+  }, [visits]);
+
   const collegeVisitCounts = useMemo(() => {
     // This calculation is now based on all visits
     if (!users || !visits) return [];
@@ -123,8 +162,21 @@ export default function AdminDashboardPage() {
             <LineChart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2:00 PM</div>
-            <p className="text-xs text-muted-foreground">With 45 concurrent visitors</p>
+            {visitsLoading ? (
+              <>
+                <div className="text-2xl font-bold">...</div>
+                <p className="text-xs text-muted-foreground">Calculating...</p>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{peakHourToday.hour}</div>
+                <p className="text-xs text-muted-foreground">
+                  {peakHourToday.count > 0
+                    ? `With ${peakHourToday.count} visitors`
+                    : "No visits today"}
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
