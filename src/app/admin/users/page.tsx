@@ -39,7 +39,7 @@ import {
   
 import { MoreHorizontal, Search, UserX, Activity } from "lucide-react";
 import type { UserProfile } from "@/lib/schema";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
 import { collection, doc, query, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { UserActivityDialog } from "@/components/UserActivityDialog";
@@ -47,6 +47,7 @@ import { UserActivityDialog } from "@/components/UserActivityDialog";
 export default function UsersPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { user: authUser } = useUser();
   const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users')) : null, [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
 
@@ -141,10 +142,12 @@ export default function UsersPage() {
                                     <Activity className="mr-2 h-4 w-4" />
                                     View Activity
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => setBlockUser(user)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                                    <UserX className="mr-2 h-4 w-4" />
-                                    {user.isBlocked ? "Unblock" : "Block"} User
-                                </DropdownMenuItem>
+                                {authUser?.uid !== user.id && (
+                                    <DropdownMenuItem onSelect={() => setBlockUser(user)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                                        <UserX className="mr-2 h-4 w-4" />
+                                        {user.isBlocked ? "Unblock" : "Block"} User
+                                    </DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                           </DropdownMenu>
                       </TableCell>

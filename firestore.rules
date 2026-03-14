@@ -36,10 +36,13 @@ service cloud.firestore {
     /**
      * Checks if the authenticated user has admin privileges.
      * Admin status is granted if the 'role' field in their user document is 'admin'.
+     * CRITICAL: This rule MUST check for the existence of the user document before reading it.
      */
     function isAdmin() {
       let userDocPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      return isSignedIn() && get(userDocPath).data.role == 'admin';
+      return isSignedIn()
+          && exists(userDocPath)
+          && get(userDocPath).data.role == 'admin';
     }
 
     /**
