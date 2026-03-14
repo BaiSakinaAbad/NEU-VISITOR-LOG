@@ -17,7 +17,7 @@ The manual logbook system traditionally used in university libraries presents se
 
 *   **Inefficiency:** Manual entry is time-consuming for both visitors and library staff, leading to queues and delays, especially during peak hours.
 *   **Data Inaccuracy:** Illegible handwriting, incomplete entries, and human error compromise the quality and reliability of the collected data.
-*   **Limited Analytics:** Extracting meaningful insights from a physical logbook is a laborious, manual process. It is impractical to generate real-time statistics on library usage, peak hours, or popular visit reasons.
+*   **Limited Analytics:** Extracting meaningful insights from a physical logbook is a laborious, manual process. It is impractical to generate real-time statistics on library usage, peak hours, or popular visit purposes.
 *   **Security Concerns:** A physical logbook offers minimal security and no effective way to manage or restrict access for specific individuals.
 *   **Physical Wear and Tear:** Logbooks are susceptible to damage, loss, and degradation over time, posing a risk to long-term data preservation.
 
