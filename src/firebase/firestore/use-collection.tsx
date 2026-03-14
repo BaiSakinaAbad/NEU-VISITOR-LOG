@@ -25,21 +25,6 @@ export interface UseCollectionResult<T> {
   error: FirestoreError | Error | null; // Error object, or null.
 }
 
-/* Internal implementation of Query:
-  https://github.com/firebase/firebase-js-sdk/blob/c5f08a9bc5da0d2b0207802c972d53724ccef055/packages/firestore/src/lite-api/reference.ts#L143
-*/
-export interface InternalQuery extends Query<DocumentData> {
-  _query: {
-    path: {
-      canonicalString(): string;
-      toString(): string;
-    };
-    // Properties for collection group queries
-    isCollectionGroupQuery?: boolean;
-    collectionGroup?: string;
-  }
-}
-
 /**
  * React hook to subscribe to a Firestore collection or query in real-time.
  * Handles nullable references/queries.
@@ -88,26 +73,30 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (error: FirestoreError) => {
-        let path = '(unknown query path)'; // Default in case inspection fails
+        let path = '(unknown query path)';
         try {
-            const ref = memoizedTargetRefOrQuery as any; // Use 'any' for flexible inspection
-            if (ref) {
-                // Check if it's a collection group query by looking for `collectionGroup` on the internal object
-                if (ref._query && ref._query.isCollectionGroupQuery && ref._query.collectionGroup) {
-                    path = `(collection group: '${ref._query.collectionGroup}')`;
-                } 
-                // Check if it has a 'path' property, typical of CollectionReference
-                else if (typeof ref.path === 'string') {
-                    path = ref.path;
-                } 
-                // Fallback for other queries, try to get path from internal object
-                else if (ref._query && ref._query.path && typeof ref._query.path.canonicalString === 'function') {
-                    path = ref._query.path.canonicalString();
-                }
+          const ref = memoizedTargetRefOrQuery as any;
+          if (ref) {
+            // A CollectionReference has a public `path` property. This is the most reliable check.
+            if (typeof ref.path === 'string') {
+              path = ref.path;
+            } 
+            // If it's a Query object, we must inspect its internal `_query` property.
+            else if (ref._query) {
+              const internalQuery = ref._query;
+              // Collection Group queries are identified by the `collectionGroup` property.
+              if (internalQuery.collectionGroup) {
+                path = `(collection group: '${internalQuery.collectionGroup}')`;
+              } 
+              // For other queries, try to get the path from the internal object.
+              else if (internalQuery.path && typeof internalQuery.path.canonicalString === 'function') {
+                path = internalQuery.path.canonicalString();
+              }
             }
+          }
         } catch (e) {
-            path = '(error inspecting query path)';
-            console.error("useCollection: Failed to inspect Firestore query/reference object.", e);
+          // This catch block prevents the app from crashing if the internal inspection fails.
+          console.error("Could not determine query path for Firestore error reporting:", e);
         }
 
         const contextualError = new FirestorePermissionError({
