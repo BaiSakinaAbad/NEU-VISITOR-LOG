@@ -92,23 +92,22 @@ export function useCollection<T = any>(
         try {
             const ref = memoizedTargetRefOrQuery as any; // Use 'any' for flexible inspection
             if (ref) {
-                if (ref.type === 'collection') {
+                // Check if it's a collection group query by looking for `collectionGroup` on the internal object
+                if (ref._query && ref._query.isCollectionGroupQuery && ref._query.collectionGroup) {
+                    path = `(collection group: '${ref._query.collectionGroup}')`;
+                } 
+                // Check if it has a 'path' property, typical of CollectionReference
+                else if (typeof ref.path === 'string') {
                     path = ref.path;
-                } else if (ref.type === 'query') {
-                    const internalQuery = ref._query;
-                    if (internalQuery) {
-                        if (internalQuery.isCollectionGroupQuery && internalQuery.collectionGroup) {
-                            path = `(collection group: '${internalQuery.collectionGroup}')`;
-                        } else if (internalQuery.path) {
-                            path = internalQuery.path.canonicalString ? internalQuery.path.canonicalString() : internalQuery.path.toString();
-                        }
-                    }
+                } 
+                // Fallback for other queries, try to get path from internal object
+                else if (ref._query && ref._query.path && typeof ref._query.path.canonicalString === 'function') {
+                    path = ref._query.path.canonicalString();
                 }
             }
         } catch (e) {
-            // If any inspection fails, we can't do much, but let's acknowledge it.
             path = '(error inspecting query path)';
-            console.error("useCollection: Failed to inspect Firestore query object.", e);
+            console.error("useCollection: Failed to inspect Firestore query/reference object.", e);
         }
 
         const contextualError = new FirestorePermissionError({
