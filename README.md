@@ -5,7 +5,7 @@
 A web and mobile-responsive application built for **New Era University (NEU)** to digitalize library entry logs. This project replaces manual logbooks with a secure, automated system that tracks library usage patterns and manages visitor access efficiently.
 
 Initial deploy:
-[NEU LIBRARY VISITOR LOG](https://neu-visitor-log.vercel.app/login)
+[NEU LIBRARY VISITOR LOG](https://neu-visitor-log.vercel.app)
 
 ---
 
