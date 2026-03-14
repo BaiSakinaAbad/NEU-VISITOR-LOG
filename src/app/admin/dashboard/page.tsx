@@ -23,14 +23,12 @@ export default function AdminDashboardPage() {
   const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users')) : null, [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
 
-  // Fetch visits from the last 30 days only to improve performance
+  // Fetch all visits. NOTE: A filter on `visitDateTime` was removed to prevent a crash
+  // caused by a missing Firestore index. The dashboard may be slow. The permanent fix
+  // is to create the index in the Firebase console.
   const visitsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    const thirtyDaysAgo = subDays(new Date(), 30);
-    return query(
-      collectionGroup(firestore, 'visits'),
-      where('visitDateTime', '>=', thirtyDaysAgo.toISOString())
-    );
+    return query(collectionGroup(firestore, 'visits'));
   }, [firestore]);
   const { data: visits, isLoading: visitsLoading } = useCollection<Visit>(visitsQuery);
 
@@ -41,7 +39,7 @@ export default function AdminDashboardPage() {
   }, [visits]);
 
   const collegeVisitCounts = useMemo(() => {
-    // This calculation is now based on the last 30 days of visits
+    // This calculation is now based on all visits
     if (!users || !visits) return [];
     const userAffiliationMap = new Map(users.map(u => [u.id, u.affiliation]));
     const counts = visits.reduce((acc, visit) => {
@@ -61,7 +59,7 @@ export default function AdminDashboardPage() {
   }, [users, visits]);
 
   const visitPurposeCounts = useMemo(() => {
-    // This calculation is now based on the last 30 days of visits
+    // This calculation is now based on all visits
     if (!visits) return [];
     const counts = visits.flatMap(visit => visit.purposeIds).reduce((acc, purpose) => {
         acc[purpose] = (acc[purpose] || 0) + 1;
@@ -74,7 +72,7 @@ export default function AdminDashboardPage() {
   }, [visits]);
 
   const dailyStats = useMemo(() => {
-    // This calculation is now based on the last 30 days of visits
+    // This calculation is now based on all visits
     if (!visits) return [];
     const stats = visits.reduce((acc, visit) => {
       const dateKey = format(new Date(visit.visitDateTime), 'yyyy-MM-dd');
@@ -95,7 +93,7 @@ export default function AdminDashboardPage() {
     <>
       <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight font-headline">Welcome, Jeremias!</h1>
-        <p className="text-muted-foreground">Real-time library analytics for the last 30 days.</p>
+        <p className="text-muted-foreground">Real-time library analytics.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
@@ -135,7 +133,7 @@ export default function AdminDashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Visitor Statistics</CardTitle>
-            <CardDescription>Daily visitor counts for the last 30 days.</CardDescription>
+            <CardDescription>Daily visitor counts across all time.</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={{
@@ -160,7 +158,7 @@ export default function AdminDashboardPage() {
                         <CardTitle>Visits by College</CardTitle>
                         <Building className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <CardDescription>Distribution of visitors across different colleges (last 30 days).</CardDescription>
+                    <CardDescription>Distribution of visitors across different colleges.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                     {collegeVisitCounts.map(({ affiliation, count }) => (
@@ -178,7 +176,7 @@ export default function AdminDashboardPage() {
                         <CardTitle>Top Visit Purposes</CardTitle>
                         <BookOpen className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <CardDescription>Most common reasons for visiting the library (last 30 days).</CardDescription>
+                    <CardDescription>Most common reasons for visiting the library.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                     {visitPurposeCounts.map(({ purpose, count }) => (
