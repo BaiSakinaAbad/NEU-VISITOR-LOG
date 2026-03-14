@@ -12,6 +12,7 @@
  * Key Security Decisions:
  * - Admin Role Management: Administrator status is determined by reading the 'role' field from the requesting user's
  *   own profile document (`/users/{uid}`). This is secure because users only have read access to their own document.
+ *   **IMPORTANT: For a user to become an admin, their 'role' field in the '/users/{uid}' document MUST be manually set to 'admin' in the Firebase Console.**
  * - User Data Scoping: All user-specific data is nested under `/users/{userId}`, allowing rules to use the `{userId}`
  *   wildcard to enforce strict data ownership without needing extra database reads.
  * - No User Listing: Non-admin users are explicitly forbidden from listing the `/users` collection to protect user privacy.
@@ -36,7 +37,13 @@ service cloud.firestore {
     /**
      * Checks if the authenticated user has admin privileges.
      * Admin status is granted if the 'role' field in their user document is 'admin'.
-     * CRITICAL: This rule MUST check for the existence of the user document before reading it.
+     *
+     * This function will return false if the user document does not exist or if the 'role' field is not 'admin'.
+     *
+     * To grant admin privileges:
+     * 1. Go to the Firebase Console -> Firestore Database.
+     * 2. In the 'users' collection, find the document with the user's UID.
+     * 3. Set the 'role' field to the string value 'admin'.
      */
     function isAdmin() {
       let userDocPath = /databases/$(database)/documents/users/$(request.auth.uid);
