@@ -43,10 +43,12 @@ export default function AdminDashboardPage() {
   const isLoading = todaysVisitsLoading || recentVisitsLoading;
   
   const todaysVisitorsCount = useMemo(() => {
+    console.log(`[Admin Dashboard Debug] Processing ${todaysVisits?.length ?? 0} visits for "Today's Visitors" card.`);
     return todaysVisits?.length ?? 0;
   }, [todaysVisits]);
 
   const peakHourToday = useMemo(() => {
+    console.log(`[Admin Dashboard Debug] Calculating peak hour from ${todaysVisits?.length ?? 0} of today's visits.`);
     if (!todaysVisits || todaysVisits.length === 0) {
       return { hour: 'N/A', count: 0 };
     }
@@ -81,6 +83,7 @@ export default function AdminDashboardPage() {
   }, [todaysVisits]);
 
   const collegeVisitCounts = useMemo(() => {
+    console.log(`[Admin Dashboard Debug] Calculating "Visits by College" from ${recentVisits?.length ?? 0} recent visits.`);
     if (!recentVisits) return [];
     
     const counts = recentVisits.reduce((acc, visit) => {
@@ -101,6 +104,7 @@ export default function AdminDashboardPage() {
   }, [recentVisits]);
 
   const visitPurposeCounts = useMemo(() => {
+    console.log(`[Admin Dashboard Debug] Calculating "Top Visit Purposes" from ${recentVisits?.length ?? 0} recent visits.`);
     if (!recentVisits) return [];
     const counts = recentVisits.flatMap(visit => visit.purposeIds).reduce((acc, purpose) => {
         acc[purpose] = (acc[purpose] || 0) + 1;
@@ -113,6 +117,7 @@ export default function AdminDashboardPage() {
   }, [recentVisits]);
 
   const dailyStats = useMemo(() => {
+    console.log(`[Admin Dashboard Debug] Calculating "Visitor Statistics" chart from ${recentVisits?.length ?? 0} recent visits.`);
     if (!recentVisits) return [];
     
     const stats = recentVisits.reduce((acc, visit) => {
