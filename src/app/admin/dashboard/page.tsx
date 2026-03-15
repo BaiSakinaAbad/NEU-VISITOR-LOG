@@ -20,9 +20,6 @@ import { format, isToday, subDays, startOfDay, isAfter, startOfToday } from "dat
 export default function AdminDashboardPage() {
   const firestore = useFirestore();
 
-  const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users')) : null, [firestore]);
-  const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
-
   const todaysVisitsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     const todayStart = startOfToday();
@@ -43,7 +40,7 @@ export default function AdminDashboardPage() {
   }, [firestore]);
   const { data: recentVisits, isLoading: recentVisitsLoading } = useCollection<Visit>(recentVisitsQuery);
 
-  const isLoading = usersLoading || todaysVisitsLoading || recentVisitsLoading;
+  const isLoading = todaysVisitsLoading || recentVisitsLoading;
   
   const todaysVisitorsCount = useMemo(() => {
     return todaysVisits?.length ?? 0;
@@ -84,11 +81,12 @@ export default function AdminDashboardPage() {
   }, [todaysVisits]);
 
   const collegeVisitCounts = useMemo(() => {
-    if (!users || !recentVisits) return [];
-    const userAffiliationMap = new Map(users.map(u => [u.id, u.affiliation]));
+    if (!recentVisits) return [];
+    
     const counts = recentVisits.reduce((acc, visit) => {
-        let affiliation = userAffiliationMap.get(visit.userId);
-        if (affiliation && affiliation !== 'Unknown') {
+        // Old visits might not have an affiliation field.
+        if (visit.affiliation && visit.affiliation !== 'Unknown') {
+            let affiliation = visit.affiliation;
             if (affiliation === 'College of Computer Studies') {
                 affiliation = 'College of Informatics and Computing Studies';
             }
@@ -100,7 +98,7 @@ export default function AdminDashboardPage() {
     return Object.entries(counts)
         .map(([affiliation, count]) => ({ affiliation, count }))
         .sort((a, b) => b.count - a.count);
-  }, [users, recentVisits]);
+  }, [recentVisits]);
 
   const visitPurposeCounts = useMemo(() => {
     if (!recentVisits) return [];
@@ -139,7 +137,7 @@ export default function AdminDashboardPage() {
         <p className="text-muted-foreground">Real-time library analytics.</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
+      <div className="grid gap-4 md:grid-cols-2 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Today's Visitors</CardTitle>
@@ -148,16 +146,6 @@ export default function AdminDashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{todaysVisitsLoading ? '...' : todaysVisitorsCount}</div>
             <p className="text-xs text-muted-foreground">Logged visits today</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <LogIn className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{usersLoading ? '...' : (users?.length ?? 0)}</div>
-            <p className="text-xs text-muted-foreground">Registered in the system</p>
           </CardContent>
         </Card>
         <Card>
