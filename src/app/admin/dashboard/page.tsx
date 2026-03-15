@@ -12,10 +12,10 @@ import { Users, LogIn, LineChart, Building, BookOpen } from "lucide-react";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { useMemo } from "react";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, collectionGroup, query } from "firebase/firestore";
+import { collection, collectionGroup, query, where } from "firebase/firestore";
 import { UserProfile } from "@/lib/schema";
 import { Visit } from "@/lib/schema";
-import { format, isToday, subDays, startOfDay, isAfter } from "date-fns";
+import { format, isToday, subDays, startOfDay, isAfter, startOfToday } from "date-fns";
 
 export default function AdminDashboardPage() {
   const firestore = useFirestore();
@@ -23,22 +23,30 @@ export default function AdminDashboardPage() {
   const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users')) : null, [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
 
-  const allVisitsQuery = useMemoFirebase(() => {
+  const todaysVisitsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    // Fetch all visits. This can be slow if there is a lot of data.
-    return query(collectionGroup(firestore, 'visits'));
+    const todayStart = startOfToday();
+    return query(
+        collectionGroup(firestore, 'visits'),
+        where('visitDateTime', '>=', todayStart.toISOString())
+    );
   }, [firestore]);
-  const { data: allVisits, isLoading: visitsLoading } = useCollection<Visit>(allVisitsQuery);
+  const { data: todaysVisits, isLoading: todaysVisitsLoading } = useCollection<Visit>(todaysVisitsQuery);
 
-  const isLoading = usersLoading || visitsLoading;
+  const recentVisitsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    const thirtyDaysAgo = startOfDay(subDays(new Date(), 30));
+    return query(
+        collectionGroup(firestore, 'visits'),
+        where('visitDateTime', '>=', thirtyDaysAgo.toISOString())
+    );
+  }, [firestore]);
+  const { data: recentVisits, isLoading: recentVisitsLoading } = useCollection<Visit>(recentVisitsQuery);
 
-  const todaysVisits = useMemo(() => {
-    if (!allVisits) return [];
-    return allVisits.filter(visit => isToday(new Date(visit.visitDateTime)));
-  }, [allVisits]);
+  const isLoading = usersLoading || todaysVisitsLoading || recentVisitsLoading;
   
   const todaysVisitorsCount = useMemo(() => {
-    return todaysVisits.length;
+    return todaysVisits?.length ?? 0;
   }, [todaysVisits]);
 
   const peakHourToday = useMemo(() => {
@@ -76,9 +84,9 @@ export default function AdminDashboardPage() {
   }, [todaysVisits]);
 
   const collegeVisitCounts = useMemo(() => {
-    if (!users || !allVisits) return [];
+    if (!users || !recentVisits) return [];
     const userAffiliationMap = new Map(users.map(u => [u.id, u.affiliation]));
-    const counts = allVisits.reduce((acc, visit) => {
+    const counts = recentVisits.reduce((acc, visit) => {
         let affiliation = userAffiliationMap.get(visit.userId);
         if (affiliation && affiliation !== 'Unknown') {
             if (affiliation === 'College of Computer Studies') {
@@ -92,11 +100,11 @@ export default function AdminDashboardPage() {
     return Object.entries(counts)
         .map(([affiliation, count]) => ({ affiliation, count }))
         .sort((a, b) => b.count - a.count);
-  }, [users, allVisits]);
+  }, [users, recentVisits]);
 
   const visitPurposeCounts = useMemo(() => {
-    if (!allVisits) return [];
-    const counts = allVisits.flatMap(visit => visit.purposeIds).reduce((acc, purpose) => {
+    if (!recentVisits) return [];
+    const counts = recentVisits.flatMap(visit => visit.purposeIds).reduce((acc, purpose) => {
         acc[purpose] = (acc[purpose] || 0) + 1;
         return acc;
     }, {} as Record<string, number>);
@@ -104,13 +112,11 @@ export default function AdminDashboardPage() {
     return Object.entries(counts)
         .map(([purpose, count]) => ({ purpose, count }))
         .sort((a, b) => b.count - a.count);
-  }, [allVisits]);
+  }, [recentVisits]);
 
   const dailyStats = useMemo(() => {
-    if (!allVisits) return [];
-    const thirtyDaysAgo = startOfDay(subDays(new Date(), 30));
-    const recentVisits = allVisits.filter(visit => isAfter(new Date(visit.visitDateTime), thirtyDaysAgo));
-
+    if (!recentVisits) return [];
+    
     const stats = recentVisits.reduce((acc, visit) => {
       const dateKey = format(new Date(visit.visitDateTime), 'yyyy-MM-dd');
       acc[dateKey] = (acc[dateKey] || 0) + 1;
@@ -124,7 +130,7 @@ export default function AdminDashboardPage() {
             visitors,
         }))
         .sort((a, b) => a.fullDate.localeCompare(b.fullDate));
-  }, [allVisits]);
+  }, [recentVisits]);
 
   return (
     <>
@@ -140,7 +146,7 @@ export default function AdminDashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{isLoading ? '...' : todaysVisitorsCount}</div>
+            <div className="text-2xl font-bold">{todaysVisitsLoading ? '...' : todaysVisitorsCount}</div>
             <p className="text-xs text-muted-foreground">Logged visits today</p>
           </CardContent>
         </Card>
@@ -160,7 +166,7 @@ export default function AdminDashboardPage() {
             <LineChart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isLoading ? (
+            {todaysVisitsLoading ? (
               <>
                 <div className="text-2xl font-bold">...</div>
                 <p className="text-xs text-muted-foreground">Calculating...</p>
@@ -208,7 +214,7 @@ export default function AdminDashboardPage() {
                         <CardTitle>Visits by College</CardTitle>
                         <Building className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <CardDescription>Distribution of all visitors.</CardDescription>
+                    <CardDescription>Distribution of visitors in the last 30 days.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                     {isLoading ? "Loading..." : collegeVisitCounts.map(({ affiliation, count }) => (
@@ -226,7 +232,7 @@ export default function AdminDashboardPage() {
                         <CardTitle>Top Visit Purposes</CardTitle>
                         <BookOpen className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <CardDescription>Most common reasons for visiting.</CardDescription>
+                    <CardDescription>Most common reasons for visiting in the last 30 days.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                     {isLoading ? "Loading..." : visitPurposeCounts.map(({ purpose, count }) => (
