@@ -1,6 +1,5 @@
 "use client";
 
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import {
   Card,
   CardContent,
@@ -8,14 +7,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Users, LogIn, LineChart, Building, BookOpen } from "lucide-react";
-import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
+import { Users, LineChart } from "lucide-react";
 import { useMemo } from "react";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, collectionGroup, query, where } from "firebase/firestore";
-import { UserProfile } from "@/lib/schema";
+import { collectionGroup, query, where } from "firebase/firestore";
 import { Visit } from "@/lib/schema";
-import { format, isToday, subDays, startOfDay, isAfter, startOfToday } from "date-fns";
+import { startOfToday } from "date-fns";
 
 export default function AdminDashboardPage() {
   const firestore = useFirestore();
@@ -30,25 +27,11 @@ export default function AdminDashboardPage() {
   }, [firestore]);
   const { data: todaysVisits, isLoading: todaysVisitsLoading } = useCollection<Visit>(todaysVisitsQuery);
 
-  const recentVisitsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    const thirtyDaysAgo = startOfDay(subDays(new Date(), 30));
-    return query(
-        collectionGroup(firestore, 'visits'),
-        where('visitDateTime', '>=', thirtyDaysAgo.toISOString())
-    );
-  }, [firestore]);
-  const { data: recentVisits, isLoading: recentVisitsLoading } = useCollection<Visit>(recentVisitsQuery);
-
-  const isLoading = todaysVisitsLoading || recentVisitsLoading;
-  
   const todaysVisitorsCount = useMemo(() => {
-    console.log(`[Admin Dashboard Debug] Processing ${todaysVisits?.length ?? 0} visits for "Today's Visitors" card.`);
     return todaysVisits?.length ?? 0;
   }, [todaysVisits]);
 
   const peakHourToday = useMemo(() => {
-    console.log(`[Admin Dashboard Debug] Calculating peak hour from ${todaysVisits?.length ?? 0} of today's visits.`);
     if (!todaysVisits || todaysVisits.length === 0) {
       return { hour: 'N/A', count: 0 };
     }
@@ -81,59 +64,6 @@ export default function AdminDashboardPage() {
         count: maxVisits
     };
   }, [todaysVisits]);
-
-  const collegeVisitCounts = useMemo(() => {
-    console.log(`[Admin Dashboard Debug] Calculating "Visits by College" from ${recentVisits?.length ?? 0} recent visits.`);
-    if (!recentVisits) return [];
-    
-    const counts = recentVisits.reduce((acc, visit) => {
-        // Old visits might not have an affiliation field.
-        if (visit.affiliation && visit.affiliation !== 'Unknown') {
-            let affiliation = visit.affiliation;
-            if (affiliation === 'College of Computer Studies') {
-                affiliation = 'College of Informatics and Computing Studies';
-            }
-            acc[affiliation] = (acc[affiliation] || 0) + 1;
-        }
-        return acc;
-    }, {} as Record<string, number>);
-    
-    return Object.entries(counts)
-        .map(([affiliation, count]) => ({ affiliation, count }))
-        .sort((a, b) => b.count - a.count);
-  }, [recentVisits]);
-
-  const visitPurposeCounts = useMemo(() => {
-    console.log(`[Admin Dashboard Debug] Calculating "Top Visit Purposes" from ${recentVisits?.length ?? 0} recent visits.`);
-    if (!recentVisits) return [];
-    const counts = recentVisits.flatMap(visit => visit.purposeIds).reduce((acc, purpose) => {
-        acc[purpose] = (acc[purpose] || 0) + 1;
-        return acc;
-    }, {} as Record<string, number>);
-
-    return Object.entries(counts)
-        .map(([purpose, count]) => ({ purpose, count }))
-        .sort((a, b) => b.count - a.count);
-  }, [recentVisits]);
-
-  const dailyStats = useMemo(() => {
-    console.log(`[Admin Dashboard Debug] Calculating "Visitor Statistics" chart from ${recentVisits?.length ?? 0} recent visits.`);
-    if (!recentVisits) return [];
-    
-    const stats = recentVisits.reduce((acc, visit) => {
-      const dateKey = format(new Date(visit.visitDateTime), 'yyyy-MM-dd');
-      acc[dateKey] = (acc[dateKey] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    return Object.entries(stats)
-        .map(([dateKey, visitors]) => ({
-            date: format(new Date(dateKey), 'MMM d'),
-            fullDate: dateKey,
-            visitors,
-        }))
-        .sort((a, b) => a.fullDate.localeCompare(b.fullDate));
-  }, [recentVisits]);
 
   return (
     <>
@@ -178,66 +108,22 @@ export default function AdminDashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Visitor Statistics</CardTitle>
-            <CardDescription>Daily visitor counts over the last 30 days.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={{
-                visitors: { label: "Visitors", color: "hsl(var(--primary))" },
-            }} className="h-[250px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dailyStats} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} fontSize={12} />
-                    <YAxis tickLine={false} axisLine={false} tickMargin={8} fontSize={12} />
-                    <Tooltip cursor={false} content={<ChartTooltipContent />} />
-                    <Bar dataKey="visitors" fill="var(--color-visitors)" radius={4} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+      <Card>
+        <CardHeader>
+            <CardTitle>Performance Update</CardTitle>
+            <CardDescription>Historical analytics have been temporarily disabled to resolve application freezing.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <p className="text-sm text-muted-foreground">
+                The dashboard was freezing because it was attempting to load and process a very large amount of historical data in your browser. To provide a fast and stable experience, the dashboard now only displays real-time statistics for today.
+            </p>
+            <br/>
+            <p className="text-sm text-muted-foreground">
+                A permanent solution for displaying historical data efficiently requires server-side data processing, which can be implemented as a next step.
+            </p>
+        </CardContent>
+      </Card>
 
-        <div className="grid grid-rows-2 gap-8">
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle>Visits by College</CardTitle>
-                        <Building className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <CardDescription>Distribution of visitors in the last 30 days.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    {isLoading ? "Loading..." : collegeVisitCounts.map(({ affiliation, count }) => (
-                        <div key={affiliation} className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">{affiliation}</span>
-                            <span className="font-semibold">{count}</span>
-                        </div>
-                    ))}
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle>Top Visit Purposes</CardTitle>
-                        <BookOpen className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <CardDescription>Most common reasons for visiting in the last 30 days.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    {isLoading ? "Loading..." : visitPurposeCounts.map(({ purpose, count }) => (
-                        <div key={purpose} className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">{purpose}</span>
-                            <span className="font-semibold">{count}</span>
-                        </div>
-                    ))}
-                </CardContent>
-            </Card>
-        </div>
-      </div>
     </>
   );
 }
