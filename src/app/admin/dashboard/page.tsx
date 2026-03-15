@@ -12,10 +12,10 @@ import { Users, LogIn, LineChart, Building, BookOpen } from "lucide-react";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { useMemo } from "react";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, collectionGroup, query, where } from "firebase/firestore";
+import { collection, collectionGroup, query, where, orderBy } from "firebase/firestore";
 import { UserProfile } from "@/lib/schema";
 import { Visit } from "@/lib/schema";
-import { format, isToday, subDays } from "date-fns";
+import { format, isToday, subDays, startOfDay } from "date-fns";
 
 export default function AdminDashboardPage() {
   const firestore = useFirestore();
@@ -23,31 +23,42 @@ export default function AdminDashboardPage() {
   const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users')) : null, [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
 
-  // Fetch all visits. NOTE: A filter on `visitDateTime` was removed to prevent a crash
-  // caused by a missing Firestore index. The dashboard may be slow. The permanent fix
-  // is to create the index in the Firebase console.
-  const visitsQuery = useMemoFirebase(() => {
+  // --- OPTIMIZED QUERIES ---
+
+  // 1. Query for today's visits for the top cards
+  const todayStart = useMemo(() => startOfDay(new Date()).toISOString(), []);
+  const todaysVisitsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collectionGroup(firestore, 'visits'));
-  }, [firestore]);
-  const { data: visits, isLoading: visitsLoading } = useCollection<Visit>(visitsQuery);
+    return query(collectionGroup(firestore, 'visits'), where('visitDateTime', '>=', todayStart));
+  }, [firestore, todayStart]);
+  const { data: todaysVisits, isLoading: todaysVisitsLoading } = useCollection<Visit>(todaysVisitsQuery);
 
+  // 2. Query for the last 30 days for the charts and historical stats
+  const thirtyDaysAgo = useMemo(() => subDays(new Date(), 30).toISOString(), []);
+  const recentVisitsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+        collectionGroup(firestore, 'visits'), 
+        where('visitDateTime', '>=', thirtyDaysAgo),
+        orderBy('visitDateTime', 'desc')
+    );
+  }, [firestore, thirtyDaysAgo]);
+  const { data: recentVisits, isLoading: recentVisitsLoading } = useCollection<Visit>(recentVisitsQuery);
 
-  const todaysVisitors = useMemo(() => {
-    if (!visits) return 0;
-    return visits.filter(v => isToday(new Date(v.visitDateTime))).length;
-  }, [visits]);
+  const isLoading = usersLoading || todaysVisitsLoading || recentVisitsLoading;
+
+  // --- CALCULATIONS using OPTIMIZED data ---
+
+  const todaysVisitorsCount = useMemo(() => {
+    return todaysVisits?.length ?? 0;
+  }, [todaysVisits]);
 
   const peakHourToday = useMemo(() => {
-    if (!visits) return { hour: 'N/A', count: 0 };
-
-    const todayVisits = visits.filter(v => isToday(new Date(v.visitDateTime)));
-
-    if (todayVisits.length === 0) {
-        return { hour: 'N/A', count: 0 };
+    if (!todaysVisits || todaysVisits.length === 0) {
+      return { hour: 'N/A', count: 0 };
     }
 
-    const hourCounts = todayVisits.reduce((acc, visit) => {
+    const hourCounts = todaysVisits.reduce((acc, visit) => {
         const hour = new Date(visit.visitDateTime).getHours(); // 0-23
         acc[hour] = (acc[hour] || 0) + 1;
         return acc;
@@ -63,25 +74,23 @@ export default function AdminDashboardPage() {
     }
     
     if (peakHour === -1) {
-        return { hour: 'N/A', count: 0 };
+      return { hour: 'N/A', count: 0 };
     }
 
-    // Formatting the hour
     const ampm = peakHour >= 12 ? 'PM' : 'AM';
     let displayHour = peakHour % 12;
-    if (displayHour === 0) displayHour = 12; // 12 PM or 12 AM
+    if (displayHour === 0) displayHour = 12;
 
     return {
         hour: `${displayHour}:00 ${ampm}`,
         count: maxVisits
     };
-  }, [visits]);
+  }, [todaysVisits]);
 
   const collegeVisitCounts = useMemo(() => {
-    // This calculation is now based on all visits
-    if (!users || !visits) return [];
+    if (!users || !recentVisits) return [];
     const userAffiliationMap = new Map(users.map(u => [u.id, u.affiliation]));
-    const counts = visits.reduce((acc, visit) => {
+    const counts = recentVisits.reduce((acc, visit) => {
         let affiliation = userAffiliationMap.get(visit.userId);
         if (affiliation && affiliation !== 'Unknown') {
             if (affiliation === 'College of Computer Studies') {
@@ -95,12 +104,11 @@ export default function AdminDashboardPage() {
     return Object.entries(counts)
         .map(([affiliation, count]) => ({ affiliation, count }))
         .sort((a, b) => b.count - a.count);
-  }, [users, visits]);
+  }, [users, recentVisits]);
 
   const visitPurposeCounts = useMemo(() => {
-    // This calculation is now based on all visits
-    if (!visits) return [];
-    const counts = visits.flatMap(visit => visit.purposeIds).reduce((acc, purpose) => {
+    if (!recentVisits) return [];
+    const counts = recentVisits.flatMap(visit => visit.purposeIds).reduce((acc, purpose) => {
         acc[purpose] = (acc[purpose] || 0) + 1;
         return acc;
     }, {} as Record<string, number>);
@@ -108,12 +116,11 @@ export default function AdminDashboardPage() {
     return Object.entries(counts)
         .map(([purpose, count]) => ({ purpose, count }))
         .sort((a, b) => b.count - a.count);
-  }, [visits]);
+  }, [recentVisits]);
 
   const dailyStats = useMemo(() => {
-    // This calculation is now based on all visits
-    if (!visits) return [];
-    const stats = visits.reduce((acc, visit) => {
+    if (!recentVisits) return [];
+    const stats = recentVisits.reduce((acc, visit) => {
       const dateKey = format(new Date(visit.visitDateTime), 'yyyy-MM-dd');
       acc[dateKey] = (acc[dateKey] || 0) + 1;
       return acc;
@@ -126,7 +133,7 @@ export default function AdminDashboardPage() {
             visitors,
         }))
         .sort((a, b) => a.fullDate.localeCompare(b.fullDate));
-  }, [visits]);
+  }, [recentVisits]);
 
   return (
     <>
@@ -142,7 +149,7 @@ export default function AdminDashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{visitsLoading ? '...' : todaysVisitors}</div>
+            <div className="text-2xl font-bold">{todaysVisitsLoading ? '...' : todaysVisitorsCount}</div>
             <p className="text-xs text-muted-foreground">Logged visits today</p>
           </CardContent>
         </Card>
@@ -162,7 +169,7 @@ export default function AdminDashboardPage() {
             <LineChart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {visitsLoading ? (
+            {todaysVisitsLoading ? (
               <>
                 <div className="text-2xl font-bold">...</div>
                 <p className="text-xs text-muted-foreground">Calculating...</p>
@@ -185,7 +192,7 @@ export default function AdminDashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Visitor Statistics</CardTitle>
-            <CardDescription>Daily visitor counts across all time.</CardDescription>
+            <CardDescription>Daily visitor counts over the last 30 days.</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={{
@@ -210,10 +217,10 @@ export default function AdminDashboardPage() {
                         <CardTitle>Visits by College</CardTitle>
                         <Building className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <CardDescription>Distribution of visitors across different colleges.</CardDescription>
+                    <CardDescription>Distribution of visitors in the last 30 days.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                    {collegeVisitCounts.map(({ affiliation, count }) => (
+                    {isLoading ? "Loading..." : collegeVisitCounts.map(({ affiliation, count }) => (
                         <div key={affiliation} className="flex justify-between items-center text-sm">
                             <span className="text-muted-foreground">{affiliation}</span>
                             <span className="font-semibold">{count}</span>
@@ -228,10 +235,10 @@ export default function AdminDashboardPage() {
                         <CardTitle>Top Visit Purposes</CardTitle>
                         <BookOpen className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <CardDescription>Most common reasons for visiting the library.</CardDescription>
+                    <CardDescription>Most common reasons for visiting in the last 30 days.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                    {visitPurposeCounts.map(({ purpose, count }) => (
+                    {isLoading ? "Loading..." : visitPurposeCounts.map(({ purpose, count }) => (
                         <div key={purpose} className="flex justify-between items-center text-sm">
                             <span className="text-muted-foreground">{purpose}</span>
                             <span className="font-semibold">{count}</span>
