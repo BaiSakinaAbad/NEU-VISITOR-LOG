@@ -6,6 +6,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { User as FirebaseUser, signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { ADMIN_EMAILS } from '@/lib/admin-config';
 
 // This component handles user data synchronization and domain validation.
 export function AuthWatcher() {
@@ -33,6 +34,7 @@ export function AuthWatcher() {
       try {
         const userDoc = await getDoc(userRef);
         const userEmail = firebaseUser.email || '';
+        const isDesignatedAdmin = userEmail && ADMIN_EMAILS.includes(userEmail);
 
         if (!userDoc.exists()) {
           // User is new, create a profile document.
@@ -46,7 +48,7 @@ export function AuthWatcher() {
             email: userEmail,
             displayName: firebaseUser.displayName || capitalizedName,
             affiliation: 'Unknown', // All users start as unknown
-            role: 'user', // New users are always created with the 'user' role.
+            role: isDesignatedAdmin ? 'admin' : 'user', // Auto-promote if in admin list
             isBlocked: false,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -54,7 +56,7 @@ export function AuthWatcher() {
           };
           setDocumentNonBlocking(userRef, newUserProfile, { merge: false });
         } else {
-          // Existing user, update last login time and potentially displayName.
+          // Existing user, update last login time and potentially other details.
           const profileData = userDoc.data();
           const updateData: any = {
             lastLoginAt: new Date().toISOString(),
@@ -66,7 +68,11 @@ export function AuthWatcher() {
             updateData.displayName = firebaseUser.displayName;
           }
           
-          // Note: We no longer automatically update the role here. This must be done manually.
+          // Automatically promote an existing user if they are on the admin list but not yet an admin
+          if (isDesignatedAdmin && profileData?.role !== 'admin') {
+            updateData.role = 'admin';
+          }
+
           updateDocumentNonBlocking(userRef, updateData);
         }
       } catch (error) {
