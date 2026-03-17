@@ -6,6 +6,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { User as FirebaseUser, signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { ADMIN_EMAILS } from '@/lib/admin-config';
 
 // This component handles user data synchronization and domain validation.
 export function AuthWatcher() {
@@ -32,20 +33,22 @@ export function AuthWatcher() {
       const userRef = doc(firestore, 'users', firebaseUser.uid);
       try {
         const userDoc = await getDoc(userRef);
+        const userEmail = firebaseUser.email || '';
+        const isDesignatedAdmin = ADMIN_EMAILS.map(e => e.toLowerCase()).includes(userEmail.toLowerCase());
 
         if (!userDoc.exists()) {
           // User is new, create a profile document.
-          const nameFromEmail = firebaseUser.email?.split('@')[0];
+          const nameFromEmail = userEmail.split('@')[0];
           const capitalizedName = nameFromEmail 
             ? nameFromEmail.charAt(0).toUpperCase() + nameFromEmail.slice(1) 
             : 'Library User';
 
           const newUserProfile = {
             id: firebaseUser.uid,
-            email: firebaseUser.email || '',
+            email: userEmail,
             displayName: firebaseUser.displayName || capitalizedName,
             affiliation: 'Unknown', // All users start as unknown
-            role: 'user', // All new users are created with the 'user' role
+            role: isDesignatedAdmin ? 'admin' : 'user', // Set role based on email list
             isBlocked: false,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -53,15 +56,21 @@ export function AuthWatcher() {
           };
           setDocumentNonBlocking(userRef, newUserProfile, { merge: false });
         } else {
-          // Existing user, update last login time and update timestamp.
+          // Existing user, update last login time and potentially role.
+          const profileData = userDoc.data();
           const updateData: any = {
             lastLoginAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           };
 
            // If displayName from Google is available and different from the one in DB, update it.
-           if (firebaseUser.displayName && firebaseUser.displayName !== userDoc.data()?.displayName) {
+           if (firebaseUser.displayName && firebaseUser.displayName !== profileData?.displayName) {
             updateData.displayName = firebaseUser.displayName;
+          }
+
+          // Promote user to admin if they are on the list but their current role is 'user'
+          if (isDesignatedAdmin && profileData?.role === 'user') {
+            updateData.role = 'admin';
           }
 
           updateDocumentNonBlocking(userRef, updateData);
