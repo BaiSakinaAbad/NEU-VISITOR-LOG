@@ -1,6 +1,6 @@
 // A list of email addresses that will be automatically assigned the 'admin' role upon login.
-// IMPORTANT: Add the full email address(es) of the designated admin account(s) here.
-// For example: ['admin1@neu.edu.ph', 'another-admin@neu.edu.ph']
+// IMPORTANT: This automatic promotion feature has been removed for security reasons.
+// Admin roles must be assigned manually in the Firestore database.
 export const ADMIN_EMAILS: string[] = [
-  // Add admin emails here
+  // This list is no longer used by the application.
 ];

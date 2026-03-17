@@ -6,7 +6,6 @@ import { doc, getDoc } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { User as FirebaseUser, signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { ADMIN_EMAILS } from '@/lib/admin-config';
 
 // This component handles user data synchronization and domain validation.
 export function AuthWatcher() {
@@ -34,7 +33,6 @@ export function AuthWatcher() {
       try {
         const userDoc = await getDoc(userRef);
         const userEmail = firebaseUser.email || '';
-        const isDesignatedAdmin = ADMIN_EMAILS.map(e => e.toLowerCase()).includes(userEmail.toLowerCase());
 
         if (!userDoc.exists()) {
           // User is new, create a profile document.
@@ -48,7 +46,7 @@ export function AuthWatcher() {
             email: userEmail,
             displayName: firebaseUser.displayName || capitalizedName,
             affiliation: 'Unknown', // All users start as unknown
-            role: isDesignatedAdmin ? 'admin' : 'user', // Set role based on email list
+            role: 'user', // New users are always created with the 'user' role.
             isBlocked: false,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -56,7 +54,7 @@ export function AuthWatcher() {
           };
           setDocumentNonBlocking(userRef, newUserProfile, { merge: false });
         } else {
-          // Existing user, update last login time and potentially role.
+          // Existing user, update last login time and potentially displayName.
           const profileData = userDoc.data();
           const updateData: any = {
             lastLoginAt: new Date().toISOString(),
@@ -67,12 +65,8 @@ export function AuthWatcher() {
            if (firebaseUser.displayName && firebaseUser.displayName !== profileData?.displayName) {
             updateData.displayName = firebaseUser.displayName;
           }
-
-          // Promote user to admin if they are on the list but their current role is 'user'
-          if (isDesignatedAdmin && profileData?.role === 'user') {
-            updateData.role = 'admin';
-          }
-
+          
+          // Note: We no longer automatically update the role here. This must be done manually.
           updateDocumentNonBlocking(userRef, updateData);
         }
       } catch (error) {
