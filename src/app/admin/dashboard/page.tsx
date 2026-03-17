@@ -3,32 +3,35 @@
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Users, LineChart } from "lucide-react";
 import { useMemo } from "react";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collectionGroup, query, where } from "firebase/firestore";
-import { Visit } from "@/lib/schema";
-import { startOfToday } from "date-fns";
+import { collectionGroup, query } from "firebase/firestore";
+import type { Visit } from "@/lib/schema";
+import { isToday } from "date-fns";
 
 export default function AdminDashboardPage() {
   const firestore = useFirestore();
 
-  const todaysVisitsQuery = useMemoFirebase(() => {
+  // This query fetches ALL visits and filters on the client.
+  // This resolves the permission error caused by a missing index, but may cause freezing with large data.
+  // The permanent fix is to create the index in Firestore and add the 'where' clause back to the query.
+  const allVisitsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    const todayStart = startOfToday();
-    return query(
-        collectionGroup(firestore, 'visits'),
-        where('visitDateTime', '>=', todayStart.toISOString())
-    );
+    return query(collectionGroup(firestore, 'visits'));
   }, [firestore]);
-  const { data: todaysVisits, isLoading: todaysVisitsLoading } = useCollection<Visit>(todaysVisitsQuery);
+  const { data: allVisits, isLoading: visitsLoading } = useCollection<Visit>(allVisitsQuery);
+
+  const todaysVisits = useMemo(() => {
+    if (!allVisits) return [];
+    return allVisits.filter(visit => isToday(new Date(visit.visitDateTime)));
+  }, [allVisits]);
 
   const todaysVisitorsCount = useMemo(() => {
-    return todaysVisits?.length ?? 0;
+    return todaysVisits.length;
   }, [todaysVisits]);
 
   const peakHourToday = useMemo(() => {
@@ -79,7 +82,7 @@ export default function AdminDashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{todaysVisitsLoading ? '...' : todaysVisitorsCount}</div>
+            <div className="text-2xl font-bold">{visitsLoading ? '...' : todaysVisitorsCount}</div>
             <p className="text-xs text-muted-foreground">Logged visits today</p>
           </CardContent>
         </Card>
@@ -89,7 +92,7 @@ export default function AdminDashboardPage() {
             <LineChart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {todaysVisitsLoading ? (
+            {visitsLoading ? (
               <>
                 <div className="text-2xl font-bold">...</div>
                 <p className="text-xs text-muted-foreground">Calculating...</p>
@@ -107,23 +110,6 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-            <CardTitle>Performance Update</CardTitle>
-            <CardDescription>Historical analytics have been temporarily disabled to resolve application freezing.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <p className="text-sm text-muted-foreground">
-                The dashboard was freezing because it was attempting to load and process a very large amount of historical data in your browser. To provide a fast and stable experience, the dashboard now only displays real-time statistics for today.
-            </p>
-            <br/>
-            <p className="text-sm text-muted-foreground">
-                A permanent solution for displaying historical data efficiently requires server-side data processing, which can be implemented as a next step.
-            </p>
-        </CardContent>
-      </Card>
-
     </>
   );
 }
