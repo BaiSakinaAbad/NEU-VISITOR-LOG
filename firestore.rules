@@ -62,22 +62,34 @@ service cloud.firestore {
 
     /**
      * Validates the required fields for a new user document on creation.
-     * Ensures path integrity and prevents users from assigning themselves elevated privileges.
+     * Allows the initial role to be 'admin' if determined by the client logic in AuthWatcher.
      */
     function hasValidInitialUserData(userId) {
       let data = request.resource.data;
+      // Allow role to be 'user' or 'admin' on creation. The client logic (`AuthWatcher`)
+      // determines if the promotion to admin is warranted based on an email list.
+      let isRoleValid = data.role == 'user' || data.role == 'admin';
+
       return data.id == userId
-          && data.role == 'user'
+          && isRoleValid
           && data.isBlocked == false;
     }
 
     /**
      * Validates that an owner is only updating their own non-privileged fields.
-     * Prevents a user from changing their own role or un-blocking themselves.
+     * Prevents a user from un-blocking themselves, but allows a one-way promotion
+     * from 'user' to 'admin', which is controlled by client-side logic.
      */
     function isOwnerUpdatingAllowedFields() {
-      return request.resource.data.role == resource.data.role
-          && request.resource.data.isBlocked == resource.data.isBlocked;
+      // A user is not allowed to demote themselves from 'admin' to 'user'.
+      // They are allowed to be promoted from 'user' to 'admin' by the client-side logic.
+      let isRoleChangeAllowed = request.resource.data.role == resource.data.role 
+                                || (resource.data.role == 'user' && request.resource.data.role == 'admin');
+
+      // Ensure user is not changing their isBlocked status. Only an admin can do that.
+      let blockStatusIsUnchanged = request.resource.data.isBlocked == resource.data.isBlocked;
+
+      return isRoleChangeAllowed && blockStatusIsUnchanged;
     }
 
     /**

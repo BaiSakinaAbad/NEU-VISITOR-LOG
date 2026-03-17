@@ -14,7 +14,7 @@
  *    in for the first time.
  * 3. Manage all future administrator roles directly in the Firestore database.
  */
-export const ADMIN_EMAILS: string[] = [
+export const ADMIN_EMAILS: string[] = ['baisakina.abad@neu.edu.ph'
   // Add the full email address of the user you want to be an admin.
   // For example: 'your-admin-email@neu.edu.ph'
 ];
