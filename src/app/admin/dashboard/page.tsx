@@ -7,23 +7,53 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Users, LineChart } from "lucide-react";
-import { useMemo } from "react";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collectionGroup, query } from "firebase/firestore";
+import { useMemo, useState, useEffect } from "react";
+import { useFirestore } from "@/firebase";
+import { collection, getDocs, type DocumentData } from "firebase/firestore";
 import type { Visit } from "@/lib/schema";
 import { isToday } from "date-fns";
 
 export default function AdminDashboardPage() {
   const firestore = useFirestore();
+  const [allVisits, setAllVisits] = useState<Visit[] | null>(null);
+  const [visitsLoading, setVisitsLoading] = useState(true);
 
-  // This query fetches ALL visits and filters on the client.
-  // This resolves the permission error caused by a missing index, but may cause freezing with large data.
-  // The permanent fix is to create the index in Firestore and add the 'where' clause back to the query.
-  const allVisitsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collectionGroup(firestore, 'visits'));
+  useEffect(() => {
+    if (!firestore) return;
+
+    const fetchAllVisits = async () => {
+        setVisitsLoading(true);
+        const fetchedVisits: Visit[] = [];
+        try {
+            // First, get all users. This is allowed for admins by the security rules.
+            const usersSnapshot = await getDocs(collection(firestore, 'users'));
+            
+            // For each user, create a promise to fetch their visits subcollection.
+            const visitPromises = usersSnapshot.docs.map(userDoc => 
+                getDocs(collection(firestore, 'users', userDoc.id, 'visits'))
+            );
+
+            // Wait for all the individual visit fetches to complete.
+            const allVisitSnapshots = await Promise.all(visitPromises);
+
+            // Process the results from all snapshots into a single array.
+            for (const visitSnapshot of allVisitSnapshots) {
+                visitSnapshot.forEach(doc => {
+                    fetchedVisits.push({ ...doc.data(), id: doc.id } as Visit);
+                });
+            }
+            setAllVisits(fetchedVisits);
+        } catch (error) {
+            console.error("Error fetching all visits for admin dashboard:", error);
+            setAllVisits([]); // Set to empty array on error to prevent crashes in dependent components.
+        } finally {
+            setVisitsLoading(false);
+        }
+    };
+
+    fetchAllVisits();
   }, [firestore]);
-  const { data: allVisits, isLoading: visitsLoading } = useCollection<Visit>(allVisitsQuery);
+
 
   const todaysVisits = useMemo(() => {
     if (!allVisits) return [];
