@@ -1,0 +1,84 @@
+'use client';
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { LogOut, User, ChevronDown } from "lucide-react";
+import { Icons } from "./icons";
+import { useUser, useAuth } from "@/firebase";
+import { signOut } from "firebase/auth";
+
+export function StudentHeader() {
+  const router = useRouter();
+  const { user } = useUser();
+  const auth = useAuth();
+
+  const handleLogout = async () => {
+    if (!auth) return;
+    await signOut(auth);
+    router.push('/login');
+  }
+  
+  const userName = user?.displayName ?? "Student";
+  const userEmail = user?.email ?? "";
+  const userAvatar = user?.photoURL;
+  const userFallback = (user?.displayName?.split(' ').map(n => n[0]).join('')) ?? "S";
+
+  const UserMenu = (
+    <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2 rounded-full pl-1 pr-2 py-1 h-auto">
+              <Avatar className="h-8 w-8">
+                  <>
+                    {userAvatar && <AvatarImage src={userAvatar} alt={userName} />}
+                    <AvatarFallback>{userFallback}</AvatarFallback>
+                  </>
+              </Avatar>
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuLabel className="font-normal">
+            <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">{userName}</p>
+                <p className="text-xs leading-none text-muted-foreground">
+                {userEmail}
+                </p>
+            </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Log out</span>
+            </DropdownMenuItem>
+        </DropdownMenuContent>
+    </DropdownMenu>
+  );
+  
+  return (
+    <header className="sticky top-0 z-40 w-full border-b bg-white shadow-sm">
+      <div className="container flex h-16 items-center space-x-4 px-4 md:px-8 sm:justify-between sm:space-x-0">
+        <div className="flex items-center gap-2">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <Icons.logo className="h-7 w-7 text-primary" />
+            <span className="font-headline text-xl font-bold text-primary">
+              NEU Library
+            </span>
+          </Link>
+        </div>
+        <div className="flex flex-1 items-center justify-end space-x-4">
+          {user && UserMenu}
+        </div>
+      </div>
+    </header>
+  );
+}
