@@ -62,34 +62,22 @@ service cloud.firestore {
 
     /**
      * Validates the required fields for a new user document on creation.
-     * Allows the initial role to be 'admin' if determined by the client logic in AuthWatcher.
+     * Ensures path integrity and prevents users from assigning themselves elevated privileges.
      */
     function hasValidInitialUserData(userId) {
       let data = request.resource.data;
-      // Allow role to be 'user' or 'admin' on creation. The client logic (`AuthWatcher`)
-      // determines if the promotion to admin is warranted based on an email list.
-      let isRoleValid = data.role == 'user' || data.role == 'admin';
-
       return data.id == userId
-          && isRoleValid
+          && data.role == 'user'
           && data.isBlocked == false;
     }
 
     /**
      * Validates that an owner is only updating their own non-privileged fields.
-     * Prevents a user from un-blocking themselves, but allows a one-way promotion
-     * from 'user' to 'admin', which is controlled by client-side logic.
+     * Prevents a user from changing their own role or un-blocking themselves.
      */
     function isOwnerUpdatingAllowedFields() {
-      // A user is not allowed to demote themselves from 'admin' to 'user'.
-      // They are allowed to be promoted from 'user' to 'admin' by the client-side logic.
-      let isRoleChangeAllowed = request.resource.data.role == resource.data.role 
-                                || (resource.data.role == 'user' && request.resource.data.role == 'admin');
-
-      // Ensure user is not changing their isBlocked status. Only an admin can do that.
-      let blockStatusIsUnchanged = request.resource.data.isBlocked == resource.data.isBlocked;
-
-      return isRoleChangeAllowed && blockStatusIsUnchanged;
+      return request.resource.data.role == resource.data.role
+          && request.resource.data.isBlocked == resource.data.isBlocked;
     }
 
     /**
@@ -119,21 +107,34 @@ service cloud.firestore {
     // User Profiles
     // --------------------------------------------------------------------
 
+    /**
+     * @description Controls access to user profile documents.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user creating their own user document for the first time.
+     * @deny (create) An anonymous user trying to create a user document.
+     * @deny (update) A user trying to change their own 'role' or 'isBlocked' status.
+     * @deny (list) A non-admin user trying to list all user profiles.
+     * @principle Enforces self-creation and ownership, with admin override for management tasks.
+     */
     match /users/{userId} {
-      // An authenticated user can create their own document.
       allow create: if isOwner(userId) && hasValidInitialUserData(userId);
-
-      // A user can read, update, and delete their own document.
-      // This rule is separated to break the circular dependency with isAdmin().
-      allow get, delete: if isOwner(userId);
-      allow update: if isOwner(userId) && isOwnerUpdatingAllowedFields();
-      
-      // An admin can read, list, update, and delete any user document.
-      allow get, list, update, delete: if isAdmin();
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow update: if (isOwner(userId) && isOwnerUpdatingAllowedFields() && resource != null) || (isAdmin() && resource != null);
+      allow delete: if (isOwner(userId) && resource != null) || (isAdmin() && resource != null);
 
       // --------------------------------------------------------------------
       // User Visits Subcollection
       // --------------------------------------------------------------------
+
+      /**
+       * @description Controls access to a user's visit logs.
+       * @path /users/{userId}/visits/{visitId}
+       * @allow (create) An authenticated user creating a visit log under their own profile.
+       * @deny (create) A user trying to create a visit log for another user.
+       * @deny (update) An admin trying to modify a user's visit history.
+       * @principle Restricts access to a user's own data tree, enforcing strict ownership for writes.
+       */
       match /visits/{visitId} {
         allow create: if isOwner(userId) && hasValidVisitData(userId);
         allow get: if isOwner(userId) || isAdmin();
@@ -147,6 +148,13 @@ service cloud.firestore {
     // Visit Purposes (Public Reference Data)
     // --------------------------------------------------------------------
 
+    /**
+     * @description Controls access to the globally available reasons for library visits.
+     * @path /visit_purposes/{purposeId}
+     * @allow (get, list) Any authenticated user reading the list of available visit purposes.
+     * @deny (create, update, delete) Any non-admin user trying to modify the list of purposes.
+     * @principle Provides public read access for reference data while restricting writes to administrators.
+     */
     match /visit_purposes/{purposeId} {
       allow get, list: if isSignedIn();
       allow create: if isAdmin();

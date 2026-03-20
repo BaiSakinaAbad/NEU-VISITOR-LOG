@@ -24,5 +24,4 @@ export interface Visit {
     visitDateTime: string;
     purposeIds: string[];
     welcomeMessage: string;
-    affiliation: string;
 }

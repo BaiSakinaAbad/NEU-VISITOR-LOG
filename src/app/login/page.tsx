@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup, signOut, type User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -42,7 +42,6 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ADMIN_EMAILS } from "@/lib/admin-config";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
@@ -70,15 +69,18 @@ export default function LoginPage() {
     },
   });
 
+  // This effect handles redirecting users who are already signed in when they visit the login page.
   useEffect(() => {
     if (isUserLoading || (user && isProfileLoading)) {
-        return; 
+        return; // Wait until auth state and profile are fully loaded
     }
 
     if (user && userProfile) {
+        // A user is already logged in, so we redirect them.
+        // The isBlocked check here is a safeguard. The main check is in handleSuccessfulLogin.
         if (userProfile.isBlocked) {
             setIsBlockedDialogOpen(true);
-            signOut(auth); 
+            signOut(auth); // Sign them out just in case
             return;
         }
 
@@ -103,72 +105,36 @@ export default function LoginPage() {
     const userRef = doc(firestore, 'users', loggedInUser.uid);
     try {
         const userDoc = await getDoc(userRef);
-        const userEmail = loggedInUser.email || '';
-        const isDesignatedAdmin = userEmail && ADMIN_EMAILS.includes(userEmail);
-        let profileData;
 
-        if (!userDoc.exists()) {
-            // User is new, create profile.
-            const nameFromEmail = userEmail.split('@')[0];
-            const capitalizedName = nameFromEmail ? nameFromEmail.charAt(0).toUpperCase() + nameFromEmail.slice(1) : 'Library User';
-            
-            profileData = {
-                id: loggedInUser.uid,
-                email: userEmail,
-                displayName: loggedInUser.displayName || capitalizedName,
-                affiliation: 'Unknown',
-                role: isDesignatedAdmin ? 'admin' : 'user',
-                isBlocked: false,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                lastLoginAt: new Date().toISOString(),
-            };
-            await setDoc(userRef, profileData); // BLOCKING write
-        } else {
-            // Existing user, update fields.
-            const existingProfile = userDoc.data() as UserProfile;
-            const updateData: any = {
-                lastLoginAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-            };
+        if (userDoc.exists()) {
+            const profile = userDoc.data() as UserProfile;
 
-            if (loggedInUser.displayName && loggedInUser.displayName !== existingProfile.displayName) {
-                updateData.displayName = loggedInUser.displayName;
-            }
-            if (isDesignatedAdmin && existingProfile.role !== 'admin') {
-                updateData.role = 'admin';
+            // Core fix: Explicitly check isBlocked status immediately after login.
+            if (profile.isBlocked) {
+                setIsBlockedDialogOpen(true);
+                await signOut(auth);
+                return; // Stop further actions
             }
 
-            if (Object.keys(updateData).length > 2) { // if more than just timestamps
-                 await updateDoc(userRef, updateData); // BLOCKING write
+            // Redirect based on role and profile completeness
+            if (profile.role === 'admin') {
+                router.push('/admin/dashboard');
+            } else if (!profile.affiliation || profile.affiliation === 'Unknown') {
+                router.push('/onboarding');
             } else {
-                 await updateDoc(userRef, { lastLoginAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+                router.push('/purpose');
             }
-            
-            profileData = { ...existingProfile, ...updateData };
-        }
-        
-        // Check profile for redirection.
-        if (profileData.isBlocked) {
-            setIsBlockedDialogOpen(true);
-            await signOut(auth);
-            return;
-        }
-
-        if (profileData.role === 'admin') {
-            router.push('/admin/dashboard');
-        } else if (!profileData.affiliation || profileData.affiliation === 'Unknown') {
-            router.push('/onboarding');
         } else {
-            router.push('/purpose');
+            // Profile doesn't exist yet, AuthWatcher will create it.
+            // Send to onboarding to wait for profile creation and then complete it.
+            router.push('/onboarding');
         }
-
-    } catch (error: any) {
-        console.error("Error during login profile handling:", error);
+    } catch (error) {
+        console.error("Error fetching user profile post-login:", error);
         toast({
             variant: "destructive",
             title: "Login Error",
-            description: "Could not retrieve or create user profile. Please try again.",
+            description: "Could not retrieve user profile. Please try again.",
         });
         await signOut(auth);
     }

@@ -115,7 +115,6 @@ export default function PurposePage() {
       visitDateTime: new Date().toISOString(),
       purposeIds: data.purposes,
       welcomeMessage: welcomeMessage,
-      affiliation: userProfile.affiliation,
     };
     
     setDocumentNonBlocking(newVisitRef, newVisit, { merge: false });
