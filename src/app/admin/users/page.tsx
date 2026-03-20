@@ -106,14 +106,15 @@ export default function UsersPage() {
               <TableHeader>
                   <TableRow>
                   <TableHead>User</TableHead>
+                  <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
               </TableHeader>
               <TableBody>
-                  {usersLoading && <TableRow><TableCell colSpan={3} className="text-center">Loading users...</TableCell></TableRow>}
+                  {usersLoading && <TableRow><TableCell colSpan={4} className="text-center">Loading users...</TableCell></TableRow>}
                   {!usersLoading && filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
+                  <TableRow key={user.id} className="hover:bg-muted transition-colors">
                       <TableCell>
                       <div className="flex items-center gap-3">
                           <Avatar className="h-9 w-9">
@@ -124,6 +125,11 @@ export default function UsersPage() {
                               <div className="text-sm text-muted-foreground">{user.email}</div>
                           </div>
                       </div>
+                      </TableCell>
+                      <TableCell>
+                          <Badge variant={user.role === 'admin' ? "default" : "secondary"}>
+                              {user.role === 'admin' ? "Admin" : "Student"}
+                          </Badge>
                       </TableCell>
                       <TableCell>
                           <Badge variant={user.isBlocked ? "destructive" : "secondary"}>
@@ -138,12 +144,12 @@ export default function UsersPage() {
                                   </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onSelect={() => setActivityUser(user)}>
+                                <DropdownMenuItem onSelect={() => setTimeout(() => setActivityUser(user), 150)}>
                                     <Activity className="mr-2 h-4 w-4" />
                                     View Activity
                                 </DropdownMenuItem>
                                 {authUser?.uid !== user.id && (
-                                    <DropdownMenuItem onSelect={() => setBlockUser(user)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                                    <DropdownMenuItem onSelect={() => setTimeout(() => setBlockUser(user), 150)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
                                         <UserX className="mr-2 h-4 w-4" />
                                         {user.isBlocked ? "Unblock" : "Block"} User
                                     </DropdownMenuItem>
