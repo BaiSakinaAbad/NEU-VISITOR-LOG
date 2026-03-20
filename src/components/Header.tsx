@@ -48,20 +48,28 @@ export function Header() {
   const UserMenu = (
     <DropdownMenu>
         <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="flex items-center gap-2 rounded-full pl-1 pr-2 py-1 h-auto">
-              <Avatar className="h-8 w-8">
-                {isAdmin && !userAvatar ? (
-                   <AvatarFallback>
-                     <User className="h-5 w-5" />
-                   </AvatarFallback>
-                ) : (
-                  <>
-                    {userAvatar && <AvatarImage src={userAvatar} alt={userName} />}
-                    <AvatarFallback>{userFallback}</AvatarFallback>
-                  </>
-                )}
-              </Avatar>
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            <Button variant="ghost" className="flex items-center gap-3 rounded-full hover:bg-transparent h-auto p-1 pr-2">
+              <div className="hidden flex-col items-end sm:flex">
+                <span className="text-sm font-bold text-[#002B5B] leading-none">{isProfileLoading ? "..." : userName}</span>
+                <span className="text-[10px] font-medium tracking-wide text-[#5B8CB9] uppercase mt-1.5 leading-none">
+                  {userProfile?.role === 'admin' ? 'ADMIN' : 'STUDENT'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Avatar className="h-10 w-10 border border-slate-200">
+                  {isAdmin && !userAvatar ? (
+                     <AvatarFallback>
+                       <User className="h-5 w-5" />
+                     </AvatarFallback>
+                  ) : (
+                    <>
+                      {userAvatar && <AvatarImage src={userAvatar} alt={userName} />}
+                      <AvatarFallback>{userFallback}</AvatarFallback>
+                    </>
+                  )}
+                </Avatar>
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </div>
             </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="end" forceMount>
