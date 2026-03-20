@@ -10,7 +10,9 @@ import {
 } from "@/components/ui/card";
 import { Users, LogIn, LineChart, Building, BookOpen } from "lucide-react";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, collectionGroup, query } from "firebase/firestore";
 import { UserProfile } from "@/lib/schema";
@@ -22,6 +24,16 @@ export default function AdminDashboardPage() {
 
   const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users')) : null, [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
+
+  const [dateRangeInput, setDateRangeInput] = useState({
+    from: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
+    to: format(new Date(), 'yyyy-MM-dd')
+  });
+
+  const [dateRange, setDateRange] = useState({
+    from: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
+    to: format(new Date(), 'yyyy-MM-dd')
+  });
 
   const allVisitsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -75,10 +87,22 @@ export default function AdminDashboardPage() {
     };
   }, [todaysVisits]);
 
+  const filteredVisits = useMemo(() => {
+    if (!allVisits) return [];
+    const startDate = startOfDay(new Date(dateRange.from));
+    const endDate = new Date(dateRange.to);
+    endDate.setHours(23, 59, 59, 999);
+
+    return allVisits.filter(visit => {
+        const visitDate = new Date(visit.visitDateTime);
+        return visitDate.getTime() >= startDate.getTime() && visitDate.getTime() <= endDate.getTime();
+    });
+  }, [allVisits, dateRange]);
+
   const collegeVisitCounts = useMemo(() => {
-    if (!users || !allVisits) return [];
+    if (!users || filteredVisits.length === 0) return [];
     const userAffiliationMap = new Map(users.map(u => [u.id, u.affiliation]));
-    const counts = allVisits.reduce((acc, visit) => {
+    const counts = filteredVisits.reduce((acc, visit) => {
         let affiliation = userAffiliationMap.get(visit.userId);
         if (affiliation && affiliation !== 'Unknown') {
             if (affiliation === 'College of Computer Studies') {
@@ -92,11 +116,11 @@ export default function AdminDashboardPage() {
     return Object.entries(counts)
         .map(([affiliation, count]) => ({ affiliation, count }))
         .sort((a, b) => b.count - a.count);
-  }, [users, allVisits]);
+  }, [users, filteredVisits]);
 
   const visitPurposeCounts = useMemo(() => {
-    if (!allVisits) return [];
-    const counts = allVisits.flatMap(visit => visit.purposeIds).reduce((acc, purpose) => {
+    if (filteredVisits.length === 0) return [];
+    const counts = filteredVisits.flatMap(visit => visit.purposeIds).reduce((acc, purpose) => {
         acc[purpose] = (acc[purpose] || 0) + 1;
         return acc;
     }, {} as Record<string, number>);
@@ -104,14 +128,12 @@ export default function AdminDashboardPage() {
     return Object.entries(counts)
         .map(([purpose, count]) => ({ purpose, count }))
         .sort((a, b) => b.count - a.count);
-  }, [allVisits]);
+  }, [filteredVisits]);
 
   const dailyStats = useMemo(() => {
-    if (!allVisits) return [];
-    const thirtyDaysAgo = startOfDay(subDays(new Date(), 30));
-    const recentVisits = allVisits.filter(visit => isAfter(new Date(visit.visitDateTime), thirtyDaysAgo));
+    if (filteredVisits.length === 0) return [];
 
-    const stats = recentVisits.reduce((acc, visit) => {
+    const stats = filteredVisits.reduce((acc, visit) => {
       const dateKey = format(new Date(visit.visitDateTime), 'yyyy-MM-dd');
       acc[dateKey] = (acc[dateKey] || 0) + 1;
       return acc;
@@ -124,7 +146,7 @@ export default function AdminDashboardPage() {
             visitors,
         }))
         .sort((a, b) => a.fullDate.localeCompare(b.fullDate));
-  }, [allVisits]);
+  }, [filteredVisits]);
 
   return (
     <>
@@ -179,13 +201,43 @@ export default function AdminDashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Visitor Statistics</CardTitle>
-            <CardDescription>Daily visitor counts over the last 30 days.</CardDescription>
+      <div className={`grid gap-8 lg:grid-cols-2 transition-all duration-700 ease-in-out ${isLoading ? "opacity-30 blur-sm scale-[0.98]" : "opacity-100 blur-none scale-100"}`}>
+        <Card className="flex flex-col">
+          <CardHeader className="flex flex-col items-start justify-start space-y-4 pb-6">
+            <div>
+              <CardTitle>Visitor Statistics</CardTitle>
+              <CardDescription>Daily visitor counts for the selected range.</CardDescription>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 border rounded-md px-2 py-1 shadow-sm">
+                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">From</span>
+                <Input 
+                  type="date" 
+                  value={dateRangeInput.from} 
+                  onChange={(e) => setDateRangeInput(prev => ({ ...prev, from: e.target.value }))}
+                  className="h-7 text-xs w-[120px] border-none shadow-none focus-visible:ring-0 bg-transparent px-1"
+                />
+              </div>
+              <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 border rounded-md px-2 py-1 shadow-sm">
+                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">To</span>
+                <Input 
+                  type="date" 
+                  value={dateRangeInput.to} 
+                  onChange={(e) => setDateRangeInput(prev => ({ ...prev, to: e.target.value }))}
+                  className="h-7 text-xs w-[120px] border-none shadow-none focus-visible:ring-0 bg-transparent px-1"
+                />
+              </div>
+              <Button 
+                onClick={() => setDateRange(dateRangeInput)}
+                size="sm"
+                className="h-9 px-4 font-semibold shadow-sm"
+              >
+                Apply Range
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1 min-h-[250px]">
             <ChartContainer config={{
                 visitors: { label: "Visitors", color: "hsl(var(--primary))" },
             }} className="h-[250px] w-full">
